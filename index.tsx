@@ -4,13 +4,12 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import "./style.css";
+
 import { definePluginSettings } from "@api/Settings";
 import { Devs } from "@utils/constants";
 import definePlugin, { OptionType } from "@utils/types";
-import { ChannelStore, GuildStore, UserStore } from "@webpack/common";
 import { openCalendarModal } from "./components/CalendarModal";
-import { CalendarToolbarButton } from "./components/ToolbarButton";
-import { addToolbarButton, removeToolbarButton } from "./utils/toolbar";
 import { CalendarManager } from "./utils/CalendarManager";
 import { OAuthManager } from "./utils/OAuthManager";
 
@@ -107,9 +106,6 @@ export default definePlugin({
         calendarManager = new CalendarManager(settings);
         oauthManager = new OAuthManager(settings);
         
-        // Add toolbar button
-        addToolbarButton("CalendarSync", CalendarToolbarButton);
-        
         // Start background sync
         calendarManager.startSync();
         
@@ -117,9 +113,6 @@ export default definePlugin({
     },
     
     stop() {
-        // Remove toolbar button
-        removeToolbarButton("CalendarSync");
-        
         // Stop background sync
         if (calendarManager) {
             calendarManager.stopSync();

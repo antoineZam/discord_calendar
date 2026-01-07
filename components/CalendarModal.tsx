@@ -5,28 +5,31 @@
  */
 
 import { classNameFactory } from "@api/Styles";
-import { openModal, ModalRoot, ModalHeader, ModalContent, ModalCloseButton, ModalSize } from "@utils/modal";
-import { React, useState, useEffect, useMemo } from "@webpack/common";
-import { CalendarEvent, CalendarViewState, EventSource } from "../types";
+import { ModalCloseButton, ModalContent, ModalHeader, ModalProps, ModalRoot, ModalSize, openModal } from "@utils/modal";
+import { React, useEffect, useMemo, useState } from "@webpack/common";
+import { CalendarEvent, CalendarViewState } from "../types";
 import { calendarManager } from "../index";
 import { settings } from "../index";
 import { CalendarGrid } from "./CalendarGrid";
 import { EventCard } from "./EventCard";
 import { CalendarFilters } from "./CalendarFilters";
 import { EventDetails } from "./EventDetails";
-import "../styles/calendar.css";
 
 const cl = classNameFactory("calendar-sync-");
 
 export function openCalendarModal() {
-    openModal(props => <CalendarModal {...props} />);
+    openModal(props => (
+        <ModalRoot {...props} size={ModalSize.LARGE} className={cl("modal")}>
+            <CalendarModalContent onClose={props.onClose} />
+        </ModalRoot>
+    ));
 }
 
 interface CalendarModalProps {
     onClose: () => void;
 }
 
-export function CalendarModal({ onClose }: CalendarModalProps) {
+function CalendarModalContent({ onClose }: CalendarModalProps) {
     const [viewState, setViewState] = useState<CalendarViewState>({
         currentDate: new Date(),
         view: settings.store.defaultCalendarView as CalendarViewState["view"] || "month",
@@ -141,7 +144,7 @@ export function CalendarModal({ onClose }: CalendarModalProps) {
     }
 
     return (
-        <ModalRoot size={ModalSize.LARGE} className={cl("modal")}>
+        <>
             <ModalHeader className={cl("header")}>
                 <div className={cl("header-left")}>
                     <h2 className={cl("title")}>
@@ -253,7 +256,7 @@ export function CalendarModal({ onClose }: CalendarModalProps) {
                     />
                 )}
             </ModalContent>
-        </ModalRoot>
+        </>
     );
 }
 
