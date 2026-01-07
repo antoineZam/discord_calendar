@@ -1,0 +1,32 @@
+{
+    "name": "calendar-sync",
+    "version": "1.0.0",
+    "description": "Vencord plugin to sync Outlook and Google Calendar events with Discord server events",
+    "main": "index.tsx",
+    "author": "Your Name",
+    "license": "GPL-3.0-or-later",
+    "keywords": [
+        "vencord",
+        "discord",
+        "calendar",
+        "google-calendar",
+        "outlook",
+        "plugin"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/yourusername/discord_calendar"
+    },
+    "bugs": {
+        "url": "https://github.com/yourusername/discord_calendar/issues"
+    },
+    "peerDependencies": {
+        "react": "^18.0.0",
+        "react-dom": "^18.0.0"
+    },
+    "vencord": {
+        "displayName": "CalendarSync",
+        "description": "Sync Outlook and Google Calendar with Discord events"
+    }
+}
+
