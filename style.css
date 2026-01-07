@@ -4,36 +4,58 @@
  */
 
 /* ============================================
-   CSS Variables & Theme
+   Header Bar Icon - Light grey, white on hover
+   ============================================ */
+.vc-calendar-btn {
+    color: #b5bac1 !important;
+    transition: color 0.15s ease;
+}
+
+.vc-calendar-btn:hover {
+    color: #ffffff !important;
+}
+
+.vc-calendar-btn[class*="selected"] {
+    color: #ffffff !important;
+}
+
+.vc-calendar-icon {
+    width: 24px;
+    height: 24px;
+}
+
+/* ============================================
+   CSS Variables & Dark Theme
    ============================================ */
 :root {
-    --calendar-bg: var(--background-primary);
-    --calendar-surface: var(--background-secondary);
-    --calendar-surface-alt: var(--background-secondary-alt);
-    --calendar-border: var(--background-modifier-accent);
-    --calendar-text: var(--text-normal);
-    --calendar-text-muted: var(--text-muted);
-    --calendar-accent: var(--brand-experiment);
-    --calendar-discord: var(--brand-experiment);
+    --calendar-bg: #1e1f22;
+    --calendar-surface: #2b2d31;
+    --calendar-surface-alt: #232428;
+    --calendar-border: #3f4147;
+    --calendar-text: #f2f3f5;
+    --calendar-text-muted: #b5bac1;
+    --calendar-accent: #5865f2;
+    --calendar-discord: #5865f2;
     --calendar-google: #4285F4;
     --calendar-outlook: #0078D4;
     --calendar-radius: 8px;
     --calendar-radius-lg: 12px;
-    --calendar-shadow: 0 8px 32px rgba(0, 0, 0, 0.24);
+    --calendar-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
     --calendar-transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ============================================
-   Modal Styles
+   Modal Styles - Solid dark background
    ============================================ */
 .calendar-sync-modal {
     width: 95vw !important;
     max-width: 1400px !important;
     height: 85vh !important;
     max-height: 900px !important;
-    background: var(--calendar-bg) !important;
+    background: #1e1f22 !important;
     border-radius: var(--calendar-radius-lg) !important;
     overflow: hidden !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
 }
 
 .calendar-sync-header {
@@ -41,8 +63,8 @@
     align-items: center;
     justify-content: space-between;
     padding: 16px 24px;
-    background: var(--calendar-surface);
-    border-bottom: 1px solid var(--calendar-border);
+    background: #2b2d31;
+    border-bottom: 1px solid #3f4147;
     gap: 16px;
 }
 
@@ -82,7 +104,7 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    background: var(--calendar-surface-alt);
+    background: #232428;
     padding: 4px;
     border-radius: var(--calendar-radius);
 }
@@ -94,21 +116,27 @@
     padding: 8px;
     background: none;
     border: none;
-    color: var(--calendar-text-muted);
+    color: #b5bac1;
     cursor: pointer;
     border-radius: 6px;
     transition: var(--calendar-transition);
 }
 
 .calendar-sync-nav-btn:hover {
-    background: var(--background-modifier-hover);
-    color: var(--calendar-text);
+    background: #404249;
+    color: #ffffff;
 }
 
 .calendar-sync-nav-btn.calendar-sync-today-btn {
     padding: 8px 16px;
     font-size: 13px;
     font-weight: 500;
+    background: #5865f2;
+    color: #ffffff;
+}
+
+.calendar-sync-nav-btn.calendar-sync-today-btn:hover {
+    background: #4752c4;
 }
 
 .calendar-sync-header-right {
@@ -119,7 +147,7 @@
 
 .calendar-sync-view-switcher {
     display: flex;
-    background: var(--calendar-surface-alt);
+    background: #232428;
     padding: 4px;
     border-radius: var(--calendar-radius);
     gap: 2px;
@@ -129,7 +157,7 @@
     padding: 8px 14px;
     background: none;
     border: none;
-    color: var(--calendar-text-muted);
+    color: #b5bac1;
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
@@ -138,13 +166,13 @@
 }
 
 .calendar-sync-view-btn:hover {
-    background: var(--background-modifier-hover);
-    color: var(--calendar-text);
+    background: #404249;
+    color: #ffffff;
 }
 
 .calendar-sync-view-btn.calendar-sync-active {
-    background: var(--calendar-accent);
-    color: white;
+    background: #5865f2;
+    color: #ffffff;
 }
 
 /* ============================================
@@ -154,13 +182,14 @@
     display: flex;
     height: calc(100% - 64px);
     overflow: hidden;
+    background: #1e1f22;
 }
 
 .calendar-sync-sidebar {
     width: 280px;
     min-width: 280px;
-    background: var(--calendar-surface);
-    border-right: 1px solid var(--calendar-border);
+    background: #2b2d31;
+    border-right: 1px solid #3f4147;
     display: flex;
     flex-direction: column;
     overflow-y: auto;
@@ -171,6 +200,7 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    background: #1e1f22;
 }
 
 /* ============================================
@@ -185,7 +215,7 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: var(--calendar-text-muted);
+    color: #b5bac1;
     margin: 0 0 12px 0;
 }
 
@@ -208,7 +238,7 @@
 }
 
 .calendar-sync-filter-item:hover {
-    background: var(--background-modifier-hover);
+    background: #404249;
 }
 
 .calendar-sync-filter-checkbox {
@@ -237,13 +267,13 @@
 
 .calendar-sync-filter-name {
     font-size: 14px;
-    color: var(--calendar-text);
+    color: #f2f3f5;
 }
 
 .calendar-sync-filter-count {
     font-size: 12px;
-    color: var(--calendar-text-muted);
-    background: var(--background-modifier-accent);
+    color: #b5bac1;
+    background: #3f4147;
     padding: 2px 6px;
     border-radius: 10px;
 }
@@ -254,7 +284,7 @@
 
 .calendar-sync-filter-divider {
     height: 1px;
-    background: var(--calendar-border);
+    background: #3f4147;
     margin: 16px 0;
 }
 
@@ -272,7 +302,7 @@
 .calendar-sync-toggle-track {
     position: absolute;
     inset: 0;
-    background: var(--background-modifier-accent);
+    background: #4e5058;
     border-radius: 10px;
     transition: var(--calendar-transition);
 }
@@ -290,7 +320,7 @@
 }
 
 .calendar-sync-filter-checkbox:checked ~ .calendar-sync-filter-toggle .calendar-sync-toggle-track {
-    background: var(--calendar-accent);
+    background: #5865f2;
 }
 
 .calendar-sync-filter-checkbox:checked ~ .calendar-sync-filter-toggle .calendar-sync-toggle-thumb {
@@ -299,7 +329,7 @@
 
 .calendar-sync-filter-description {
     font-size: 12px;
-    color: var(--calendar-text-muted);
+    color: #b5bac1;
     margin-top: 2px;
 }
 
@@ -308,7 +338,7 @@
    ============================================ */
 .calendar-sync-mini-calendar {
     padding: 16px;
-    border-top: 1px solid var(--calendar-border);
+    border-top: 1px solid #3f4147;
 }
 
 .calendar-sync-mini-calendar-grid {
@@ -328,7 +358,7 @@
     text-align: center;
     font-size: 11px;
     font-weight: 600;
-    color: var(--calendar-text-muted);
+    color: #b5bac1;
     padding: 4px;
 }
 
@@ -344,7 +374,7 @@
     align-items: center;
     justify-content: center;
     font-size: 12px;
-    color: var(--calendar-text);
+    color: #f2f3f5;
     background: none;
     border: none;
     border-radius: 50%;
@@ -354,22 +384,22 @@
 }
 
 .calendar-sync-mini-day:hover {
-    background: var(--background-modifier-hover);
+    background: #404249;
 }
 
 .calendar-sync-mini-day.calendar-sync-other-month {
-    color: var(--calendar-text-muted);
+    color: #b5bac1;
     opacity: 0.5;
 }
 
 .calendar-sync-mini-day.calendar-sync-today {
-    background: var(--calendar-accent);
+    background: #5865f2;
     color: white;
     font-weight: 600;
 }
 
 .calendar-sync-mini-day.calendar-sync-selected {
-    outline: 2px solid var(--calendar-accent);
+    outline: 2px solid #5865f2;
     outline-offset: 1px;
 }
 
@@ -379,7 +409,7 @@
     bottom: 4px;
     width: 4px;
     height: 4px;
-    background: var(--calendar-accent);
+    background: #5865f2;
     border-radius: 50%;
 }
 
@@ -393,7 +423,7 @@
 .calendar-sync-upcoming-events {
     flex: 1;
     padding: 16px;
-    border-top: 1px solid var(--calendar-border);
+    border-top: 1px solid #3f4147;
     overflow-y: auto;
 }
 
@@ -416,8 +446,8 @@
 .calendar-sync-month-header {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    background: var(--calendar-surface);
-    border-bottom: 1px solid var(--calendar-border);
+    background: #2b2d31;
+    border-bottom: 1px solid #3f4147;
 }
 
 .calendar-sync-month-day-header {
@@ -425,7 +455,7 @@
     text-align: center;
     font-size: 12px;
     font-weight: 600;
-    color: var(--calendar-text-muted);
+    color: #b5bac1;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -435,6 +465,7 @@
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    background: #1e1f22;
 }
 
 .calendar-sync-month-week {
@@ -445,31 +476,32 @@
 }
 
 .calendar-sync-month-day {
-    border: 1px solid var(--calendar-border);
+    border: 1px solid #3f4147;
     border-top: none;
     border-left: none;
     padding: 8px;
     min-height: 100%;
     overflow: hidden;
     transition: var(--calendar-transition);
+    background: #1e1f22;
 }
 
 .calendar-sync-month-day:hover {
-    background: var(--background-modifier-hover);
+    background: #232428;
 }
 
 .calendar-sync-month-day.calendar-sync-other-month {
-    background: var(--calendar-surface-alt);
+    background: #232428;
 }
 
 .calendar-sync-month-day.calendar-sync-today {
-    background: rgba(88, 101, 242, 0.08);
+    background: #2a2b40;
 }
 
 .calendar-sync-day-number {
     font-size: 13px;
     font-weight: 500;
-    color: var(--calendar-text-muted);
+    color: #b5bac1;
     margin-bottom: 6px;
 }
 
@@ -479,7 +511,7 @@
     justify-content: center;
     width: 24px;
     height: 24px;
-    background: var(--calendar-accent);
+    background: #5865f2;
     color: white;
     border-radius: 50%;
 }
@@ -492,13 +524,13 @@
 
 .calendar-sync-more-events {
     font-size: 11px;
-    color: var(--calendar-text-muted);
+    color: #b5bac1;
     padding: 2px 4px;
     cursor: pointer;
 }
 
 .calendar-sync-more-events:hover {
-    color: var(--calendar-accent);
+    color: #5865f2;
 }
 
 /* ============================================
@@ -509,7 +541,7 @@
     align-items: center;
     gap: 6px;
     padding: 4px 8px;
-    background: var(--event-color, var(--calendar-accent));
+    background: var(--event-color, #5865f2);
     border: none;
     border-radius: 4px;
     cursor: pointer;
@@ -525,11 +557,11 @@
 
 .calendar-sync-event-pill.calendar-sync-pending {
     opacity: 0.4;
-    background: var(--background-modifier-accent);
+    background: #4e5058;
 }
 
 .calendar-sync-event-pill.calendar-sync-pending .calendar-sync-event-pill-dot {
-    background: var(--event-color, var(--calendar-accent));
+    background: var(--event-color, #5865f2);
 }
 
 .calendar-sync-event-pill-dot {
@@ -550,7 +582,7 @@
 }
 
 .calendar-sync-event-pill.calendar-sync-pending .calendar-sync-event-pill-title {
-    color: var(--calendar-text);
+    color: #f2f3f5;
 }
 
 /* ============================================
@@ -565,8 +597,8 @@
 
 .calendar-sync-week-header {
     display: flex;
-    background: var(--calendar-surface);
-    border-bottom: 1px solid var(--calendar-border);
+    background: #2b2d31;
+    border-bottom: 1px solid #3f4147;
 }
 
 .calendar-sync-time-gutter {
@@ -584,20 +616,20 @@
 }
 
 .calendar-sync-week-day-header.calendar-sync-today {
-    background: rgba(88, 101, 242, 0.08);
+    background: #2a2b40;
 }
 
 .calendar-sync-day-name {
     font-size: 11px;
     font-weight: 600;
-    color: var(--calendar-text-muted);
+    color: #b5bac1;
     text-transform: uppercase;
 }
 
 .calendar-sync-week-day-header .calendar-sync-day-number {
     font-size: 20px;
     font-weight: 600;
-    color: var(--calendar-text);
+    color: #f2f3f5;
     margin: 0;
 }
 
@@ -616,7 +648,7 @@
 .calendar-sync-time-column {
     width: 60px;
     flex-shrink: 0;
-    border-right: 1px solid var(--calendar-border);
+    border-right: 1px solid #3f4147;
 }
 
 .calendar-sync-time-slot {
@@ -629,7 +661,7 @@
 
 .calendar-sync-time-label {
     font-size: 11px;
-    color: var(--calendar-text-muted);
+    color: #b5bac1;
     transform: translateY(-6px);
 }
 
@@ -641,16 +673,16 @@
 .calendar-sync-week-day-column {
     flex: 1;
     position: relative;
-    border-right: 1px solid var(--calendar-border);
+    border-right: 1px solid #3f4147;
 }
 
 .calendar-sync-hour-cell {
     height: 48px;
-    border-bottom: 1px solid var(--calendar-border);
+    border-bottom: 1px solid #3f4147;
 }
 
 .calendar-sync-hour-cell:hover {
-    background: var(--background-modifier-hover);
+    background: #232428;
 }
 
 /* ============================================
@@ -662,7 +694,7 @@
     left: 4px;
     right: 4px;
     padding: 4px 8px;
-    background: var(--event-color, var(--calendar-accent));
+    background: var(--event-color, #5865f2);
     border-radius: 4px;
     cursor: pointer;
     overflow: hidden;
@@ -674,15 +706,15 @@
 .calendar-sync-week-event-block:hover,
 .calendar-sync-day-event-block:hover {
     transform: scale(1.02);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     z-index: 2;
 }
 
 .calendar-sync-week-event-block.calendar-sync-pending,
 .calendar-sync-day-event-block.calendar-sync-pending {
     opacity: 0.4;
-    background: var(--background-modifier-accent);
-    border-left-color: var(--event-color, var(--calendar-accent));
+    background: #4e5058;
+    border-left-color: var(--event-color, #5865f2);
 }
 
 .calendar-sync-event-block-time {
@@ -703,12 +735,12 @@
 
 .calendar-sync-week-event-block.calendar-sync-pending .calendar-sync-event-block-title,
 .calendar-sync-day-event-block.calendar-sync-pending .calendar-sync-event-block-title {
-    color: var(--calendar-text);
+    color: #f2f3f5;
 }
 
 .calendar-sync-week-event-block.calendar-sync-pending .calendar-sync-event-block-time,
 .calendar-sync-day-event-block.calendar-sync-pending .calendar-sync-event-block-time {
-    color: var(--calendar-text-muted);
+    color: #b5bac1;
 }
 
 .calendar-sync-event-block-content {

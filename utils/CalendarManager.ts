@@ -5,20 +5,23 @@
  */
 
 import { findByProps } from "@webpack";
-import { ChannelStore, GuildStore, UserStore } from "@webpack/common";
+import { GuildScheduledEventStore, GuildStore } from "@webpack/common";
 import { 
     CalendarEvent, 
     DiscordGuildEvent, 
     GoogleCalendarEvent, 
     OutlookCalendarEvent,
-    EventSource,
-    EventStatus,
     DiscordEventEntityType
 } from "../types";
 
-// Discord API modules
-const GuildScheduledEventStore = findByProps("getGuildScheduledEvent", "getGuildScheduledEventsForGuild");
-const GuildScheduledEventActions = findByProps("fetchGuildScheduledEvents");
+// Try to get actions module - may not be available immediately
+function getGuildScheduledEventActions() {
+    try {
+        return findByProps("fetchGuildScheduledEvents");
+    } catch {
+        return null;
+    }
+}
 
 interface Settings {
     store: {
@@ -52,16 +55,20 @@ export class CalendarManager {
     }
     
     startSync() {
-        // Initial sync
-        this.syncAllCalendars();
-        
-        // Set up interval
-        const intervalMs = this.settings.store.syncIntervalMinutes * 60 * 1000;
-        this.syncInterval = setInterval(() => {
+        // Delay initial sync to allow Discord stores to load
+        console.log("[CalendarSync] Waiting for Discord to fully load...");
+        setTimeout(() => {
+            console.log("[CalendarSync] Starting initial sync...");
             this.syncAllCalendars();
-        }, intervalMs);
-        
-        console.log(`[CalendarSync] Started sync with ${this.settings.store.syncIntervalMinutes}min interval`);
+            
+            // Set up interval
+            const intervalMs = this.settings.store.syncIntervalMinutes * 60 * 1000;
+            this.syncInterval = setInterval(() => {
+                this.syncAllCalendars();
+            }, intervalMs);
+            
+            console.log(`[CalendarSync] Started sync with ${this.settings.store.syncIntervalMinutes}min interval`);
+        }, 3000); // Wait 3 seconds for Discord to load
     }
     
     stopSync() {
@@ -129,32 +136,88 @@ export class CalendarManager {
     // Discord Events
     async fetchDiscordEvents(): Promise<CalendarEvent[]> {
         const events: CalendarEvent[] = [];
-        const guilds = Object.values(GuildStore.getGuilds());
-        const currentUser = UserStore.getCurrentUser();
+        
+        // Check if stores are available
+        if (!GuildStore) {
+            console.warn("[CalendarSync] GuildStore not available yet");
+            return events;
+        }
+        
+        if (!GuildScheduledEventStore) {
+            console.warn("[CalendarSync] GuildScheduledEventStore not available yet");
+            return events;
+        }
+        
+        const guilds = Object.values(GuildStore.getGuilds()) as any[];
         const optedInEvents = this.getOptedInEvents();
+        
+        console.log(`[CalendarSync] Fetching events from ${guilds.length} guilds...`);
+        
+        // Try to get the actions module (may not be available)
+        const actions = getGuildScheduledEventActions();
         
         for (const guild of guilds) {
             try {
-                // Fetch events for this guild
-                await GuildScheduledEventActions?.fetchGuildScheduledEvents(guild.id);
+                // Try to fetch events for this guild via API (if available)
+                if (actions && typeof actions.fetchGuildScheduledEvents === "function") {
+                    try {
+                        await actions.fetchGuildScheduledEvents(guild.id);
+                    } catch {
+                        // Silently continue - events might already be cached
+                    }
+                }
                 
-                const guildEvents = GuildScheduledEventStore?.getGuildScheduledEventsForGuild(guild.id) || [];
+                // Get events from store - try multiple methods
+                let guildEvents: any = null;
                 
-                for (const rawEvent of Object.values(guildEvents) as DiscordGuildEvent[]) {
+                try {
+                    if (typeof GuildScheduledEventStore.getGuildScheduledEventsForGuild === "function") {
+                        guildEvents = GuildScheduledEventStore.getGuildScheduledEventsForGuild(guild.id);
+                    }
+                } catch {
+                    // Try alternative method
+                }
+                
+                if (!guildEvents) {
+                    try {
+                        // Try getting all events and filtering
+                        const allEvents = (GuildScheduledEventStore as any).getGuildScheduledEvents?.() || {};
+                        guildEvents = {};
+                        for (const [id, event] of Object.entries(allEvents)) {
+                            if ((event as any)?.guild_id === guild.id) {
+                                guildEvents[id] = event;
+                            }
+                        }
+                    } catch {
+                        guildEvents = {};
+                    }
+                }
+                
+                if (!guildEvents) guildEvents = {};
+                
+                const eventValues = Object.values(guildEvents) as DiscordGuildEvent[];
+                
+                if (eventValues.length > 0) {
+                    console.log(`[CalendarSync] Found ${eventValues.length} events in ${guild.name}`);
+                }
+                
+                for (const rawEvent of eventValues) {
+                    if (!rawEvent || !rawEvent.id) continue;
+                    
                     const isOptedIn = optedInEvents.includes(rawEvent.id) || 
                                       rawEvent.user_rsvp?.interested === true;
                     
                     const event: CalendarEvent = {
                         id: rawEvent.id,
                         source: "discord",
-                        title: rawEvent.name,
+                        title: rawEvent.name || "Untitled Event",
                         description: rawEvent.description,
                         startTime: new Date(rawEvent.scheduled_start_time),
                         endTime: rawEvent.scheduled_end_time 
                             ? new Date(rawEvent.scheduled_end_time)
-                            : new Date(new Date(rawEvent.scheduled_start_time).getTime() + 3600000), // Default 1 hour
+                            : new Date(new Date(rawEvent.scheduled_start_time).getTime() + 3600000),
                         status: isOptedIn ? "opted_in" : "pending",
-                        guildId: rawEvent.guild_id,
+                        guildId: rawEvent.guild_id || guild.id,
                         guildName: guild.name,
                         guildIcon: guild.icon 
                             ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png`
@@ -171,16 +234,17 @@ export class CalendarManager {
                             : undefined,
                         entityType: rawEvent.entity_type,
                         location: rawEvent.entity_metadata?.location,
-                        color: "var(--brand-experiment)",
+                        color: "#5865f2",
                     };
                     
                     events.push(event);
                 }
             } catch (err) {
-                console.error(`[CalendarSync] Failed to fetch events for guild ${guild.name}:`, err);
+                console.error(`[CalendarSync] Failed to process guild ${guild.name}:`, err);
             }
         }
         
+        console.log(`[CalendarSync] Total Discord events found: ${events.length}`);
         return events;
     }
     
