@@ -123,23 +123,45 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
 
     async function handleOptIn(event: CalendarEvent) {
         if (event.source !== "discord") return;
+        if (!event.guildId) {
+            console.error("[CalendarSync] Event missing guildId:", event);
+            return;
+        }
         
+        setIsLoading(true);
         try {
-            await calendarManager.optInToEvent(event.id, event.guildId!);
+            console.log(`[CalendarSync] Opting into event: ${event.id} in guild ${event.guildId}`);
+            await calendarManager.optInToEvent(event.id, event.guildId);
+            // Update selected event to show opted_in status
+            selectEvent({ ...event, status: "opted_in" });
             await fetchEvents(); // Refresh events
         } catch (err) {
             console.error("[CalendarSync] Failed to opt into event:", err);
+            setError(`Failed to opt in: ${(err as Error).message}`);
+        } finally {
+            setIsLoading(false);
         }
     }
 
     async function handleOptOut(event: CalendarEvent) {
         if (event.source !== "discord") return;
+        if (!event.guildId) {
+            console.error("[CalendarSync] Event missing guildId:", event);
+            return;
+        }
         
+        setIsLoading(true);
         try {
-            await calendarManager.optOutOfEvent(event.id, event.guildId!);
+            console.log(`[CalendarSync] Opting out of event: ${event.id} in guild ${event.guildId}`);
+            await calendarManager.optOutOfEvent(event.id, event.guildId);
+            // Update selected event to show pending status
+            selectEvent({ ...event, status: "pending" });
             await fetchEvents(); // Refresh events
         } catch (err) {
             console.error("[CalendarSync] Failed to opt out of event:", err);
+            setError(`Failed to opt out: ${(err as Error).message}`);
+        } finally {
+            setIsLoading(false);
         }
     }
 

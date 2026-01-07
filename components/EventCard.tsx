@@ -90,7 +90,12 @@ export function EventCard({ event, compact = false, onClick }: EventCardProps) {
             
             {event.coverImage && (
                 <div className={cl("event-card-cover")}>
-                    <img src={event.coverImage} alt="" />
+                    <img 
+                        src={event.coverImage} 
+                        alt={event.title}
+                        loading="lazy"
+                        decoding="async"
+                    />
                 </div>
             )}
             

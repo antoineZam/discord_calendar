@@ -5,7 +5,7 @@
  */
 
 import { findByProps } from "@webpack";
-import { GuildScheduledEventStore, GuildStore } from "@webpack/common";
+import { GuildScheduledEventStore, GuildStore, RestAPI } from "@webpack/common";
 import { 
     CalendarEvent, 
     DiscordGuildEvent, 
@@ -207,6 +207,20 @@ export class CalendarManager {
                     const isOptedIn = optedInEvents.includes(rawEvent.id) || 
                                       rawEvent.user_rsvp?.interested === true;
                     
+                    // Build high-resolution image URLs
+                    const guildIconUrl = guild.icon 
+                        ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.${guild.icon.startsWith("a_") ? "gif" : "webp"}?size=128`
+                        : undefined;
+                    
+                    const creatorAvatarUrl = rawEvent.creator?.avatar
+                        ? `https://cdn.discordapp.com/avatars/${rawEvent.creator.id}/${rawEvent.creator.avatar}.${rawEvent.creator.avatar.startsWith("a_") ? "gif" : "webp"}?size=128`
+                        : undefined;
+                    
+                    // Event cover images - use highest quality (800x320 is the native size, but we can request larger)
+                    const coverImageUrl = rawEvent.image
+                        ? `https://cdn.discordapp.com/guild-events/${rawEvent.id}/${rawEvent.image}.webp?size=1024`
+                        : undefined;
+                    
                     const event: CalendarEvent = {
                         id: rawEvent.id,
                         source: "discord",
@@ -219,19 +233,13 @@ export class CalendarManager {
                         status: isOptedIn ? "opted_in" : "pending",
                         guildId: rawEvent.guild_id || guild.id,
                         guildName: guild.name,
-                        guildIcon: guild.icon 
-                            ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png`
-                            : undefined,
+                        guildIcon: guildIconUrl,
                         channelId: rawEvent.channel_id,
                         creatorId: rawEvent.creator_id,
                         creatorName: rawEvent.creator?.username,
-                        creatorAvatar: rawEvent.creator?.avatar
-                            ? `https://cdn.discordapp.com/avatars/${rawEvent.creator.id}/${rawEvent.creator.avatar}.png`
-                            : undefined,
+                        creatorAvatar: creatorAvatarUrl,
                         interestedCount: rawEvent.user_count,
-                        coverImage: rawEvent.image
-                            ? `https://cdn.discordapp.com/guild-events/${rawEvent.id}/${rawEvent.image}.png`
-                            : undefined,
+                        coverImage: coverImageUrl,
                         entityType: rawEvent.entity_type,
                         location: rawEvent.entity_metadata?.location,
                         color: "#5865f2",
@@ -463,71 +471,56 @@ export class CalendarManager {
     }
     
     async optInToEvent(eventId: string, guildId: string) {
-        // Call Discord API to mark as interested
-        const response = await fetch(
-            `https://discord.com/api/v9/guilds/${guildId}/scheduled-events/${eventId}/users/@me`,
-            {
-                method: "PUT",
-                headers: {
-                    Authorization: this.getDiscordToken(),
-                    "Content-Type": "application/json",
-                },
+        console.log(`[CalendarSync] Opting into event ${eventId} in guild ${guildId}`);
+        
+        try {
+            // Use Vencord's RestAPI which handles authentication automatically
+            await RestAPI.put({
+                url: `/guilds/${guildId}/scheduled-events/${eventId}/users/@me`,
+            });
+            
+            console.log(`[CalendarSync] Successfully opted into event ${eventId}`);
+            
+            // Update local state
+            const optedIn = this.getOptedInEvents();
+            if (!optedIn.includes(eventId)) {
+                optedIn.push(eventId);
+                this.setOptedInEvents(optedIn);
             }
-        );
-        
-        if (!response.ok) {
-            throw new Error(`Failed to opt in: ${response.status}`);
+            
+            // Refresh events
+            await this.syncAllCalendars();
+        } catch (err: any) {
+            console.error(`[CalendarSync] Opt-in failed:`, err);
+            throw new Error(`Failed to opt in: ${err.message || err}`);
         }
-        
-        // Update local state
-        const optedIn = this.getOptedInEvents();
-        if (!optedIn.includes(eventId)) {
-            optedIn.push(eventId);
-            this.setOptedInEvents(optedIn);
-        }
-        
-        // Refresh events
-        await this.syncAllCalendars();
     }
     
     async optOutOfEvent(eventId: string, guildId: string) {
-        // Call Discord API to remove interest
-        const response = await fetch(
-            `https://discord.com/api/v9/guilds/${guildId}/scheduled-events/${eventId}/users/@me`,
-            {
-                method: "DELETE",
-                headers: {
-                    Authorization: this.getDiscordToken(),
-                },
+        console.log(`[CalendarSync] Opting out of event ${eventId} in guild ${guildId}`);
+        
+        try {
+            // Use Vencord's RestAPI which handles authentication automatically
+            await RestAPI.del({
+                url: `/guilds/${guildId}/scheduled-events/${eventId}/users/@me`,
+            });
+            
+            console.log(`[CalendarSync] Successfully opted out of event ${eventId}`);
+            
+            // Update local state
+            const optedIn = this.getOptedInEvents();
+            const index = optedIn.indexOf(eventId);
+            if (index !== -1) {
+                optedIn.splice(index, 1);
+                this.setOptedInEvents(optedIn);
             }
-        );
-        
-        if (!response.ok) {
-            throw new Error(`Failed to opt out: ${response.status}`);
+            
+            // Refresh events
+            await this.syncAllCalendars();
+        } catch (err: any) {
+            console.error(`[CalendarSync] Opt-out failed:`, err);
+            throw new Error(`Failed to opt out: ${err.message || err}`);
         }
-        
-        // Update local state
-        const optedIn = this.getOptedInEvents();
-        const index = optedIn.indexOf(eventId);
-        if (index !== -1) {
-            optedIn.splice(index, 1);
-            this.setOptedInEvents(optedIn);
-        }
-        
-        // Refresh events
-        await this.syncAllCalendars();
-    }
-    
-    private getDiscordToken(): string {
-        // Get Discord token from the client
-        const token = (window as any).webpackChunkdiscord_app?.push?.([[Symbol()], {}, r => {
-            for (const m of Object.values(r.c)) {
-                if ((m as any)?.exports?.default?.getToken) {
-                    return (m as any).exports.default.getToken();
-                }
-            }
-        }]);
-        return token || "";
     }
 }
 

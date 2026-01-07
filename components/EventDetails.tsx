@@ -48,7 +48,12 @@ export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetails
                 {/* Cover Image */}
                 {event.coverImage && (
                     <div className={cl("event-details-cover")}>
-                        <img src={event.coverImage} alt="" />
+                        <img 
+                            src={event.coverImage} 
+                            alt={event.title}
+                            loading="eager"
+                            decoding="async"
+                        />
                     </div>
                 )}
                 
