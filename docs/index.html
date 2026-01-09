@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Discord Calendar Sync</title>
+    <style>
+        body { font-family: sans-serif; background: #2b2d31; color: #f2f3f5; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .container { background: #313338; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); text-align: center; max-width: 500px; }
+        h2 { margin-top: 0; color: #5865f2; }
+        .code-box { background: #1e1f22; padding: 15px; border-radius: 4px; font-family: monospace; font-size: 1.2rem; margin: 20px 0; word-break: break-all; border: 1px solid #1e1f22; cursor: pointer; position: relative; }
+        .code-box:hover { border-color: #5865f2; }
+        p { color: #b5bac1; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="success" class="hidden">
+            <h2>Authorization Successful!</h2>
+            <p>Click the code below to copy it, then paste it back into Discord:</p>
+            <div id="code" class="code-box" onclick="copyCode()" title="Click to copy">Loading...</div>
+            <p style="font-size: 0.9em; margin-top: 20px;">You can now close this tab.</p>
+        </div>
+        <div id="error" class="hidden">
+            <h2 style="color: #ed4245">Something went wrong</h2>
+            <p>No authorization code was found in the URL.</p>
+        </div>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+        const codeBox = document.getElementById('code');
+        
+        if (code) {
+            document.getElementById('success').classList.remove('hidden');
+            codeBox.innerText = code;
+        } else {
+            document.getElementById('error').classList.remove('hidden');
+        }
+
+        function copyCode() {
+            if (!code) return;
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = codeBox.innerText;
+                codeBox.innerText = "Copied!";
+                codeBox.style.color = "#43b581";
+                setTimeout(() => {
+                    codeBox.innerText = originalText;
+                    codeBox.style.color = "";
+                }, 1500);
+            });
+        }
+    </script>
+</body>
+</html>
