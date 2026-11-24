@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import type { GuildScheduledEventEntityType } from "@vencord/discord-types/enums";
+
 export type EventSource = "discord" | "google" | "outlook";
 
 export type EventStatus = "opted_in" | "pending" | "declined";
@@ -26,7 +28,7 @@ export interface CalendarEvent {
     creatorAvatar?: string;
     interestedCount?: number;
     coverImage?: string;
-    entityType?: DiscordEventEntityType;
+    entityType?: GuildScheduledEventEntityType;
     // External calendar fields
     attendees?: EventAttendee[];
     organizer?: {
@@ -39,42 +41,6 @@ export interface EventAttendee {
     name?: string;
     email?: string;
     responseStatus?: "accepted" | "declined" | "tentative" | "needsAction";
-}
-
-export enum DiscordEventEntityType {
-    STAGE_INSTANCE = 1,
-    VOICE = 2,
-    EXTERNAL = 3,
-}
-
-export interface DiscordGuildEvent {
-    id: string;
-    guild_id: string;
-    channel_id?: string;
-    creator_id?: string;
-    name: string;
-    description?: string;
-    scheduled_start_time: string;
-    scheduled_end_time?: string;
-    privacy_level: number;
-    status: number;
-    entity_type: DiscordEventEntityType;
-    entity_id?: string;
-    entity_metadata?: {
-        location?: string;
-    };
-    creator?: {
-        id: string;
-        username: string;
-        avatar?: string;
-    };
-    user_count?: number;
-    image?: string;
-    user_rsvp?: {
-        user_id: string;
-        guild_scheduled_event_id: string;
-        interested: boolean;
-    };
 }
 
 export type CalendarView = "month" | "week" | "day" | "agenda";

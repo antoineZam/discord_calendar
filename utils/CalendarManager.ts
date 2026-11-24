@@ -4,11 +4,12 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import type { Guild, GuildScheduledEvent } from "@vencord/discord-types";
 import { GuildScheduledEventStore, GuildStore, RestAPI } from "@webpack/common";
 
 import { settings } from "../settings";
-import { CalendarEvent, DiscordGuildEvent } from "../types";
-import { MINUTE_MS } from "./date";
+import { CalendarEvent } from "../types";
+import { HOUR_MS, MINUTE_MS } from "./date";
 import { logger } from "./logger";
 import { fetchProviderEvents } from "./providers";
 
@@ -65,7 +66,7 @@ export class CalendarManager {
         // Sync Discord events
         if (settings.store.discordEventsEnabled) {
             try {
-                const discordEvents = await this.fetchDiscordEvents();
+                const discordEvents = await fetchDiscordEvents();
                 events.push(...discordEvents);
             } catch (err) {
                 logger.error("Failed to fetch Discord events:", err);
@@ -108,122 +109,7 @@ export class CalendarManager {
         });
     }
 
-    // Discord Events
-    async fetchDiscordEvents(): Promise<CalendarEvent[]> {
-        const events: CalendarEvent[] = [];
-
-        // Check if stores are available
-        if (!GuildStore) {
-            logger.warn("GuildStore not available yet");
-            return events;
-        }
-
-        if (!GuildScheduledEventStore) {
-            logger.warn("GuildScheduledEventStore not available yet");
-            return events;
-        }
-
-        const guilds = Object.values(GuildStore.getGuilds()) as any[];
-        const optedInEvents = this.getOptedInEvents();
-
-        logger.info(`Fetching events from ${guilds.length} guilds...`);
-
-        for (const guild of guilds) {
-            try {
-                // Fetch events directly via REST API
-                let guildEvents: any = {};
-
-                try {
-                    const response = await RestAPI.get({
-                        url: `/guilds/${guild.id}/scheduled-events`,
-                        query: { with_user_count: true }
-                    });
-
-                    if (response?.body && Array.isArray(response.body)) {
-                        for (const event of response.body) {
-                            guildEvents[event.id] = event;
-                        }
-                    }
-                } catch (apiErr) {
-                    // Fallback to store if API fails
-                    logger.debug(`API fetch failed for ${guild.name}, trying store...`);
-
-                    try {
-                        if (GuildScheduledEventStore && typeof GuildScheduledEventStore.getGuildScheduledEventsForGuild === "function") {
-                            guildEvents = GuildScheduledEventStore.getGuildScheduledEventsForGuild(guild.id) || {};
-                        }
-                    } catch {
-                        guildEvents = {};
-                    }
-                }
-
-                const eventValues = Object.values(guildEvents) as DiscordGuildEvent[];
-
-                if (eventValues.length > 0) {
-                    logger.debug(`Found ${eventValues.length} events in ${guild.name}`);
-                }
-
-                for (const rawEvent of eventValues) {
-                    if (!rawEvent || !rawEvent.id) continue;
-
-                    const isOptedIn = optedInEvents.includes(rawEvent.id) ||
-                                      rawEvent.user_rsvp?.interested === true;
-
-                    // Build high-resolution image URLs
-                    const guildIconUrl = guild.icon
-                        ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.${guild.icon.startsWith("a_") ? "gif" : "webp"}?size=128`
-                        : undefined;
-
-                    const creatorAvatarUrl = rawEvent.creator?.avatar
-                        ? `https://cdn.discordapp.com/avatars/${rawEvent.creator.id}/${rawEvent.creator.avatar}.${rawEvent.creator.avatar.startsWith("a_") ? "gif" : "webp"}?size=128`
-                        : undefined;
-
-                    // Event cover images - use highest quality (800x320 is the native size, but we can request larger)
-                    const coverImageUrl = rawEvent.image
-                        ? `https://cdn.discordapp.com/guild-events/${rawEvent.id}/${rawEvent.image}.webp?size=1024`
-                        : undefined;
-
-                    const event: CalendarEvent = {
-                        id: rawEvent.id,
-                        source: "discord",
-                        title: rawEvent.name || "Untitled Event",
-                        description: rawEvent.description,
-                        startTime: new Date(rawEvent.scheduled_start_time),
-                        endTime: rawEvent.scheduled_end_time
-                            ? new Date(rawEvent.scheduled_end_time)
-                            : new Date(new Date(rawEvent.scheduled_start_time).getTime() + 3600000),
-                        status: isOptedIn ? "opted_in" : "pending",
-                        guildId: rawEvent.guild_id || guild.id,
-                        guildName: guild.name,
-                        guildIcon: guildIconUrl,
-                        creatorName: rawEvent.creator?.username,
-                        creatorAvatar: creatorAvatarUrl,
-                        interestedCount: rawEvent.user_count,
-                        coverImage: coverImageUrl,
-                        entityType: rawEvent.entity_type,
-                        location: rawEvent.entity_metadata?.location,
-                    };
-
-                    events.push(event);
-                }
-            } catch (err) {
-                logger.error(`Failed to process guild ${guild.name}:`, err);
-            }
-        }
-
-        logger.info(`Total Discord events found: ${events.length}`);
-        return events;
-    }
-
     // Opt-in management
-    getOptedInEvents(): string[] {
-        try {
-            return JSON.parse(settings.store.optedInEvents || "[]");
-        } catch {
-            return [];
-        }
-    }
-
     setOptedInEvents(events: string[]) {
         settings.store.optedInEvents = JSON.stringify(events);
     }
@@ -240,7 +126,7 @@ export class CalendarManager {
             logger.debug(`Successfully opted into event ${eventId}`);
 
             // Update local state
-            const optedIn = this.getOptedInEvents();
+            const optedIn = getOptedInEvents();
             if (!optedIn.includes(eventId)) {
                 optedIn.push(eventId);
                 this.setOptedInEvents(optedIn);
@@ -266,7 +152,7 @@ export class CalendarManager {
             logger.debug(`Successfully opted out of event ${eventId}`);
 
             // Update local state
-            const optedIn = this.getOptedInEvents();
+            const optedIn = getOptedInEvents();
             const index = optedIn.indexOf(eventId);
             if (index !== -1) {
                 optedIn.splice(index, 1);
@@ -283,3 +169,75 @@ export class CalendarManager {
 }
 
 export const calendarManager = new CalendarManager();
+
+/** A scheduled event as returned by the REST API, which adds a few fields to the store's shape. */
+type DiscordGuildEvent = GuildScheduledEvent & {
+    creator?: { id: string; username: string; avatar?: string | null; };
+    user_count?: number;
+    user_rsvp?: { interested: boolean; };
+};
+
+type GuildInfo = Pick<CalendarEvent, "guildId" | "guildName" | "guildIcon">;
+
+function getOptedInEvents(): string[] {
+    try {
+        return JSON.parse(settings.store.optedInEvents || "[]");
+    } catch {
+        return [];
+    }
+}
+
+async function fetchDiscordEvents() {
+    const optedIn = new Set(getOptedInEvents());
+    const events: CalendarEvent[] = [];
+
+    for (const guild of Object.values(GuildStore.getGuilds())) {
+        const info = guildInfo(guild);
+        for (const raw of await fetchGuildEvents(guild.id))
+            events.push(toCalendarEvent(raw, info, optedIn));
+    }
+
+    return events;
+}
+
+/** Asks the API, since the store only knows the events of guilds opened during this session. */
+async function fetchGuildEvents(guildId: string): Promise<DiscordGuildEvent[]> {
+    try {
+        const { body } = await RestAPI.get({ url: `/guilds/${guildId}/scheduled-events`, query: { with_user_count: true } });
+        return Array.isArray(body) ? body : [];
+    } catch (err) {
+        logger.debug(`Scheduled events request failed for guild ${guildId}, falling back to the store`, err);
+        return GuildScheduledEventStore.getGuildScheduledEventsForGuild(guildId);
+    }
+}
+
+function guildInfo(guild: Guild): GuildInfo {
+    return { guildId: guild.id, guildName: guild.name, guildIcon: cdnImage("icons", guild.id, guild.icon) };
+}
+
+function toCalendarEvent(raw: DiscordGuildEvent, guild: GuildInfo, optedIn: Set<string>): CalendarEvent {
+    const startTime = new Date(raw.scheduled_start_time);
+
+    return {
+        ...guild,
+        id: raw.id,
+        source: "discord",
+        title: raw.name || "Untitled Event",
+        description: raw.description ?? undefined,
+        location: raw.entity_metadata?.location,
+        startTime,
+        endTime: raw.scheduled_end_time ? new Date(raw.scheduled_end_time) : new Date(startTime.getTime() + HOUR_MS),
+        status: optedIn.has(raw.id) || raw.user_rsvp?.interested ? "opted_in" : "pending",
+        creatorName: raw.creator?.username,
+        creatorAvatar: cdnImage("avatars", raw.creator?.id, raw.creator?.avatar),
+        interestedCount: raw.user_count,
+        coverImage: raw.image ? `https://cdn.discordapp.com/guild-events/${raw.id}/${raw.image}.webp?size=1024` : undefined,
+        entityType: raw.entity_type,
+    };
+}
+
+/** Animated images have a hash starting with "a_". */
+function cdnImage(kind: "icons" | "avatars", id?: string, hash?: string | null) {
+    if (!id || !hash) return undefined;
+    return `https://cdn.discordapp.com/${kind}/${id}/${hash}.${hash.startsWith("a_") ? "gif" : "webp"}?size=128`;
+}

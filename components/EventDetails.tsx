@@ -5,10 +5,11 @@
  */
 
 import { classNameFactory } from "@api/Styles";
+import { GuildScheduledEventEntityType } from "@vencord/discord-types/enums";
 import { React } from "@webpack/common";
 import type { ComponentType } from "react";
 
-import { CalendarEvent, DiscordEventEntityType } from "../types";
+import { CalendarEvent } from "../types";
 import { formatFullDate, formatTimeRange } from "../utils/date";
 import { sourceColor, sourceLabel } from "../utils/sources";
 import { AccountCircleIcon, CalendarIcon, CheckCircleIcon, CheckIcon, CloseIcon, IconProps, LocationIcon, MicIcon, PeopleIcon, PersonIcon, SourceIcon, StageIcon } from "./Icons";
@@ -22,10 +23,10 @@ interface EventDetailsProps {
     onOptOut: (event: CalendarEvent) => void;
 }
 
-const ENTITY_TYPES: Record<DiscordEventEntityType, { label: string; Icon: ComponentType<IconProps>; }> = {
-    [DiscordEventEntityType.STAGE_INSTANCE]: { label: "Stage Event", Icon: StageIcon },
-    [DiscordEventEntityType.VOICE]: { label: "Voice Event", Icon: MicIcon },
-    [DiscordEventEntityType.EXTERNAL]: { label: "External Event", Icon: CalendarIcon },
+const ENTITY_TYPES: Record<GuildScheduledEventEntityType, { label: string; Icon: ComponentType<IconProps>; }> = {
+    [GuildScheduledEventEntityType.STAGE_INSTANCE]: { label: "Stage Event", Icon: StageIcon },
+    [GuildScheduledEventEntityType.VOICE]: { label: "Voice Event", Icon: MicIcon },
+    [GuildScheduledEventEntityType.EXTERNAL]: { label: "External Event", Icon: CalendarIcon },
 };
 
 export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetailsProps) {
