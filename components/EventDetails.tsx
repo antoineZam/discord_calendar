@@ -22,7 +22,7 @@ interface EventDetailsProps {
     onInterestChange: (interested: boolean) => void;
 }
 
-const ENTITY_TYPES: Record<GuildScheduledEventEntityType, { label: string; Icon: ComponentType<IconProps>; }> = {
+const ENTITY_TYPES: Partial<Record<GuildScheduledEventEntityType, { label: string; Icon: ComponentType<IconProps>; }>> = {
     [GuildScheduledEventEntityType.STAGE_INSTANCE]: { label: "Stage Event", Icon: StageIcon },
     [GuildScheduledEventEntityType.VOICE]: { label: "Voice Event", Icon: MicIcon },
     [GuildScheduledEventEntityType.EXTERNAL]: { label: "External Event", Icon: CalendarIcon },
