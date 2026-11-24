@@ -5,6 +5,7 @@
  */
 
 import { classNameFactory } from "@api/Styles";
+import type { ComponentType, ReactNode } from "react";
 
 import { CalendarEvent, CalendarView } from "../types";
 import { addDays, formatLongDate, formatTime, formatTimeRange, getMonthWeeks, getWeekDays, HOUR_LABELS, HOUR_MS, isSameDay, WEEKDAY_NAMES } from "../utils/date";
@@ -14,40 +15,28 @@ import { CalendarIcon } from "./Icons";
 
 const cl = classNameFactory("calendar-sync-");
 
-interface CalendarGridProps {
-    view: CalendarView;
-    currentDate: Date;
-    events: CalendarEvent[];
-    selectedEvent: CalendarEvent | null;
-    onSelectEvent: (event: CalendarEvent | null) => void;
-}
+const HOUR_HEIGHT = 48;
+const MAX_PILLS_PER_DAY = 3;
 
-export function CalendarGrid({ view, currentDate, events, selectedEvent, onSelectEvent }: CalendarGridProps) {
-    switch (view) {
-        case "month":
-            return <MonthView currentDate={currentDate} events={events} onSelectEvent={onSelectEvent} />;
-        case "week":
-            return <WeekView currentDate={currentDate} events={events} onSelectEvent={onSelectEvent} />;
-        case "day":
-            return <DayView currentDate={currentDate} events={events} onSelectEvent={onSelectEvent} />;
-        case "agenda":
-            return <AgendaView currentDate={currentDate} events={events} onSelectEvent={onSelectEvent} />;
-        default:
-            return <MonthView currentDate={currentDate} events={events} onSelectEvent={onSelectEvent} />;
-    }
-}
-
-// Month View Component
-function MonthView({
-    currentDate,
-    events,
-    onSelectEvent
-}: {
+interface ViewProps {
     currentDate: Date;
     events: CalendarEvent[];
     onSelectEvent: (event: CalendarEvent) => void;
-}) {
-    const weeks = getMonthWeeks(currentDate);
+}
+
+const VIEWS: Record<CalendarView, ComponentType<ViewProps>> = {
+    month: MonthView,
+    week: WeekView,
+    day: DayView,
+    agenda: AgendaView,
+};
+
+export function CalendarGrid({ view, ...props }: ViewProps & { view: CalendarView; }) {
+    const View = VIEWS[view] ?? MonthView;
+    return <View {...props} />;
+}
+
+function MonthView({ currentDate, events, onSelectEvent }: ViewProps) {
     const today = new Date();
 
     return (
@@ -58,37 +47,24 @@ function MonthView({
                 ))}
             </div>
             <div className={cl("month-grid")}>
-                {weeks.map((week, wi) => (
+                {getMonthWeeks(currentDate).map((week, wi) => (
                     <div key={wi} className={cl("month-week")}>
-                        {week.map((day, di) => {
-                            const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+                        {week.map(day => {
                             const isToday = isSameDay(day, today);
                             const dayEvents = events.filter(e => isSameDay(e.startTime, day));
 
                             return (
                                 <div
-                                    key={di}
-                                    className={cl(
-                                        "month-day",
-                                        !isCurrentMonth && "other-month",
-                                        isToday && "today"
-                                    )}
+                                    key={day.getDay()}
+                                    className={cl("month-day", day.getMonth() !== currentDate.getMonth() && "other-month", isToday && "today")}
                                 >
-                                    <div className={cl("day-number", isToday && "today")}>
-                                        {day.getDate()}
-                                    </div>
+                                    <div className={cl("day-number", isToday && "today")}>{day.getDate()}</div>
                                     <div className={cl("day-events")}>
-                                        {dayEvents.slice(0, 3).map(event => (
-                                            <EventPill
-                                                key={event.id}
-                                                event={event}
-                                                onClick={() => onSelectEvent(event)}
-                                            />
+                                        {dayEvents.slice(0, MAX_PILLS_PER_DAY).map(event => (
+                                            <EventPill key={event.id} event={event} onClick={() => onSelectEvent(event)} />
                                         ))}
-                                        {dayEvents.length > 3 && (
-                                            <span className={cl("more-events")}>
-                                                +{dayEvents.length - 3} more
-                                            </span>
+                                        {dayEvents.length > MAX_PILLS_PER_DAY && (
+                                            <span className={cl("more-events")}>+{dayEvents.length - MAX_PILLS_PER_DAY} more</span>
                                         )}
                                     </div>
                                 </div>
@@ -101,16 +77,7 @@ function MonthView({
     );
 }
 
-// Week View Component
-function WeekView({
-    currentDate,
-    events,
-    onSelectEvent
-}: {
-    currentDate: Date;
-    events: CalendarEvent[];
-    onSelectEvent: (event: CalendarEvent) => void;
-}) {
+function WeekView({ currentDate, events, onSelectEvent }: ViewProps) {
     const days = getWeekDays(currentDate);
     const today = new Date();
 
@@ -118,46 +85,25 @@ function WeekView({
         <div className={cl("week-view")}>
             <div className={cl("week-header")}>
                 <div className={cl("time-gutter")} />
-                {days.map((day, i) => (
-                    <div
-                        key={i}
-                        className={cl("week-day-header", isSameDay(day, today) && "today")}
-                    >
-                        <span className={cl("day-name")}>
-                            {WEEKDAY_NAMES.short[day.getDay()]}
-                        </span>
-                        <span className={cl("day-number", isSameDay(day, today) && "today")}>
-                            {day.getDate()}
-                        </span>
+                {days.map(day => (
+                    <div key={day.getDay()} className={cl("week-day-header", isSameDay(day, today) && "today")}>
+                        <span className={cl("day-name")}>{WEEKDAY_NAMES.short[day.getDay()]}</span>
+                        <span className={cl("day-number", isSameDay(day, today) && "today")}>{day.getDate()}</span>
                     </div>
                 ))}
             </div>
             <div className={cl("week-grid")}>
-                <div className={cl("time-column")}>
-                    {HOUR_LABELS.map(label => (
-                        <div key={label} className={cl("time-slot")}>
-                            <span className={cl("time-label")}>
-                                {label}
-                            </span>
-                        </div>
-                    ))}
-                </div>
+                <TimeColumn />
                 <div className={cl("week-days")}>
-                    {days.map((day, di) => (
-                        <div key={di} className={cl("week-day-column")}>
-                            {HOUR_LABELS.map(label => (
-                                <div key={label} className={cl("hour-cell")} />
+                    {days.map(day => (
+                        <div key={day.getDay()} className={cl("week-day-column")}>
+                            <HourCells />
+                            {events.filter(e => isSameDay(e.startTime, day)).map(event => (
+                                <TimedEvent key={event.id} event={event} className="week-event-block" minHeight={24} onClick={() => onSelectEvent(event)}>
+                                    <span className={cl("event-block-time")}>{formatTime(event.startTime)}</span>
+                                    <span className={cl("event-block-title")}>{event.title}</span>
+                                </TimedEvent>
                             ))}
-                            {/* Render events for this day */}
-                            {events
-                                .filter(e => isSameDay(e.startTime, day))
-                                .map(event => (
-                                    <WeekEventBlock
-                                        key={event.id}
-                                        event={event}
-                                        onClick={() => onSelectEvent(event)}
-                                    />
-                                ))}
                         </div>
                     ))}
                 </div>
@@ -166,47 +112,27 @@ function WeekView({
     );
 }
 
-// Day View Component
-function DayView({
-    currentDate,
-    events,
-    onSelectEvent
-}: {
-    currentDate: Date;
-    events: CalendarEvent[];
-    onSelectEvent: (event: CalendarEvent) => void;
-}) {
-    const dayEvents = events.filter(e => isSameDay(e.startTime, currentDate));
+function DayView({ currentDate, events, onSelectEvent }: ViewProps) {
     const isToday = isSameDay(currentDate, new Date());
 
     return (
         <div className={cl("day-view")}>
             <div className={cl("day-header")}>
-                <h2 className={cl("day-title", isToday && "today")}>
-                    {formatLongDate(currentDate)}
-                </h2>
+                <h2 className={cl("day-title", isToday && "today")}>{formatLongDate(currentDate)}</h2>
                 {isToday && <span className={cl("today-badge")}>Today</span>}
             </div>
             <div className={cl("day-grid")}>
-                <div className={cl("time-column")}>
-                    {HOUR_LABELS.map(label => (
-                        <div key={label} className={cl("time-slot")}>
-                            <span className={cl("time-label")}>
-                                {label}
-                            </span>
-                        </div>
-                    ))}
-                </div>
+                <TimeColumn />
                 <div className={cl("day-events-column")}>
-                    {HOUR_LABELS.map(label => (
-                        <div key={label} className={cl("hour-cell")} />
-                    ))}
-                    {dayEvents.map(event => (
-                        <DayEventBlock
-                            key={event.id}
-                            event={event}
-                            onClick={() => onSelectEvent(event)}
-                        />
+                    <HourCells />
+                    {events.filter(e => isSameDay(e.startTime, currentDate)).map(event => (
+                        <TimedEvent key={event.id} event={event} className="day-event-block" minHeight={32} onClick={() => onSelectEvent(event)}>
+                            <div className={cl("event-block-content")}>
+                                <span className={cl("event-block-title")}>{event.title}</span>
+                                <span className={cl("event-block-time")}>{formatTimeRange(event.startTime, event.endTime)}</span>
+                                {event.location && <span className={cl("event-block-location")}>{event.location}</span>}
+                            </div>
+                        </TimedEvent>
                     ))}
                 </div>
             </div>
@@ -214,132 +140,99 @@ function DayView({
     );
 }
 
-// Agenda View Component
-function AgendaView({
-    currentDate,
-    events,
-    onSelectEvent
-}: {
-    currentDate: Date;
-    events: CalendarEvent[];
-    onSelectEvent: (event: CalendarEvent) => void;
-}) {
-    const upcomingEvents = events
+function AgendaView({ currentDate, events, onSelectEvent }: ViewProps) {
+    const upcoming = events
         .filter(e => e.startTime >= currentDate)
         .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
-    // Group events by date
-    const groupedEvents: Map<string, CalendarEvent[]> = new Map();
+    if (!upcoming.length) {
+        return (
+            <div className={cl("agenda-view")}>
+                <div className={cl("no-events")}>
+                    <CalendarIcon size={48} />
+                    <p>No upcoming events</p>
+                </div>
+            </div>
+        );
+    }
 
-    upcomingEvents.forEach(event => {
-        const dateKey = event.startTime.toDateString();
-        if (!groupedEvents.has(dateKey)) {
-            groupedEvents.set(dateKey, []);
-        }
-        groupedEvents.get(dateKey)!.push(event);
-    });
+    const days = new Map<string, CalendarEvent[]>();
+    for (const event of upcoming) {
+        const key = event.startTime.toDateString();
+        const group = days.get(key);
+        if (group) group.push(event);
+        else days.set(key, [event]);
+    }
 
     const today = new Date();
     const tomorrow = addDays(today, 1);
 
     return (
         <div className={cl("agenda-view")}>
-            {upcomingEvents.length === 0 ? (
-                <div className={cl("no-events")}>
-                    <CalendarIcon size={48} />
-                    <p>No upcoming events</p>
-                </div>
-            ) : (
-                Array.from(groupedEvents.entries()).map(([dateKey, dayEvents]) => {
-                    const date = dayEvents[0].startTime;
-                    const isToday = isSameDay(date, today);
-                    const prefix = isToday ? "Today · " : isSameDay(date, tomorrow) ? "Tomorrow · " : "";
+            {[...days].map(([key, dayEvents]) => {
+                const date = dayEvents[0].startTime;
+                const isToday = isSameDay(date, today);
+                const prefix = isToday ? "Today · " : isSameDay(date, tomorrow) ? "Tomorrow · " : "";
 
-                    return (
-                        <div key={dateKey} className={cl("agenda-day")}>
-                            <div className={cl("agenda-date", isToday && "today")}>
-                                {prefix + formatLongDate(date)}
-                            </div>
-                            <div className={cl("agenda-events")}>
-                                {dayEvents.map(event => (
-                                    <EventCard
-                                        key={event.id}
-                                        event={event}
-                                        onClick={() => onSelectEvent(event)}
-                                    />
-                                ))}
-                            </div>
+                return (
+                    <div key={key} className={cl("agenda-day")}>
+                        <div className={cl("agenda-date", isToday && "today")}>{prefix + formatLongDate(date)}</div>
+                        <div className={cl("agenda-events")}>
+                            {dayEvents.map(event => (
+                                <EventCard key={event.id} event={event} onClick={() => onSelectEvent(event)} />
+                            ))}
                         </div>
-                    );
-                })
-            )}
+                    </div>
+                );
+            })}
         </div>
     );
 }
 
-// Event Pill for Month View
+function TimeColumn() {
+    return (
+        <div className={cl("time-column")}>
+            {HOUR_LABELS.map((label, hour) => (
+                <div key={hour} className={cl("time-slot")}>
+                    <span className={cl("time-label")}>{label}</span>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function HourCells() {
+    return <>{HOUR_LABELS.map((_, hour) => <div key={hour} className={cl("hour-cell")} />)}</>;
+}
+
 function EventPill({ event, onClick }: { event: CalendarEvent; onClick: () => void; }) {
     return (
-        <button
-            className={cl("event-pill", event.status === "pending" && "pending")}
-            style={sourceColor(event.source)}
-            onClick={onClick}
-        >
+        <button className={cl("event-pill", event.status === "pending" && "pending")} style={sourceColor(event.source)} onClick={onClick}>
             <span className={cl("event-pill-dot")} />
             <span className={cl("event-pill-title")}>{event.title}</span>
         </button>
     );
 }
 
-// Event Block for Week View
-function WeekEventBlock({ event, onClick }: { event: CalendarEvent; onClick: () => void; }) {
+/** An event positioned on the hour grid according to its start time and duration. */
+function TimedEvent({ event, className, minHeight, onClick, children }: {
+    event: CalendarEvent;
+    className: string;
+    minHeight: number;
+    onClick: () => void;
+    children: ReactNode;
+}) {
     const { startTime, endTime } = event;
-
     const startHours = startTime.getHours() + startTime.getMinutes() / 60;
     const durationHours = (endTime.getTime() - startTime.getTime()) / HOUR_MS;
 
-    const top = startHours * 48; // 48px per hour
-    const height = Math.max(durationHours * 48, 24);
-
     return (
         <button
-            className={cl("week-event-block", event.status === "pending" && "pending")}
-            style={{ top: `${top}px`, height: `${height}px`, ...sourceColor(event.source) }}
+            className={cl(className, event.status === "pending" && "pending")}
+            style={{ top: startHours * HOUR_HEIGHT, height: Math.max(durationHours * HOUR_HEIGHT, minHeight), ...sourceColor(event.source) }}
             onClick={onClick}
         >
-            <span className={cl("event-block-time")}>
-                {formatTime(startTime)}
-            </span>
-            <span className={cl("event-block-title")}>{event.title}</span>
-        </button>
-    );
-}
-
-// Event Block for Day View
-function DayEventBlock({ event, onClick }: { event: CalendarEvent; onClick: () => void; }) {
-    const { startTime, endTime } = event;
-
-    const startHours = startTime.getHours() + startTime.getMinutes() / 60;
-    const durationHours = (endTime.getTime() - startTime.getTime()) / HOUR_MS;
-
-    const top = startHours * 48;
-    const height = Math.max(durationHours * 48, 32);
-
-    return (
-        <button
-            className={cl("day-event-block", event.status === "pending" && "pending")}
-            style={{ top: `${top}px`, height: `${height}px`, ...sourceColor(event.source) }}
-            onClick={onClick}
-        >
-            <div className={cl("event-block-content")}>
-                <span className={cl("event-block-title")}>{event.title}</span>
-                <span className={cl("event-block-time")}>
-                    {formatTimeRange(startTime, endTime)}
-                </span>
-                {event.location && (
-                    <span className={cl("event-block-location")}>{event.location}</span>
-                )}
-            </div>
+            {children}
         </button>
     );
 }

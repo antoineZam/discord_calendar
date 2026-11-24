@@ -241,7 +241,6 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
                             view={viewState.view}
                             currentDate={viewState.currentDate}
                             events={filteredEvents}
-                            selectedEvent={viewState.selectedEvent}
                             onSelectEvent={selectEvent}
                         />
                     )}
