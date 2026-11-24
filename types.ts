@@ -22,30 +22,19 @@ export interface CalendarEvent {
     guildId?: string;
     guildName?: string;
     guildIcon?: string;
-    channelId?: string;
-    creatorId?: string;
     creatorName?: string;
     creatorAvatar?: string;
-    userCount?: number;
     interestedCount?: number;
     coverImage?: string;
     entityType?: DiscordEventEntityType;
-    entityMetadata?: {
-        location?: string;
-    };
     // External calendar fields
-    calendarId?: string;
     calendarName?: string;
     color?: string;
-    recurrence?: string;
     attendees?: EventAttendee[];
     organizer?: {
         name?: string;
         email?: string;
     };
-    // UI state
-    isHovered?: boolean;
-    isExpanded?: boolean;
 }
 
 export interface EventAttendee {
@@ -167,19 +156,3 @@ export interface CalendarViewState {
         showPending: boolean;
     };
 }
-
-export interface OAuthTokens {
-    accessToken: string;
-    refreshToken: string;
-    expiresAt: number;
-}
-
-export interface CalendarSource {
-    id: string;
-    type: EventSource;
-    name: string;
-    enabled: boolean;
-    color: string;
-    lastSync?: Date;
-}
-

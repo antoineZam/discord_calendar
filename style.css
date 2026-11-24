@@ -1345,33 +1345,6 @@
 }
 
 /* ============================================
-   Toolbar Button
-   ============================================ */
-.calendar-sync-toolbar-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    background: none;
-    border: none;
-    color: var(--interactive-normal);
-    cursor: pointer;
-    border-radius: 4px;
-    transition: color 0.15s ease;
-}
-
-.calendar-sync-toolbar-button:hover {
-    color: var(--interactive-hover);
-}
-
-.calendar-sync-toolbar-icon {
-    width: 20px;
-    height: 20px;
-}
-
-/* ============================================
    Settings Panel
    ============================================ */
 .calendar-sync-settings-panel {

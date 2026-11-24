@@ -75,12 +75,6 @@ export const settings = definePluginSettings({
         markers: [5, 10, 15, 30, 60],
         stickToMarkers: true,
     },
-    eventSources: {
-        type: OptionType.STRING,
-        description: "Enabled event sources (JSON)",
-        default: "{}",
-        hidden: true,
-    },
     optedInEvents: {
         type: OptionType.STRING,
         description: "List of opted-in Discord event IDs (JSON)",

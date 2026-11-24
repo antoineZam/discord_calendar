@@ -210,8 +210,6 @@ export class CalendarManager {
                         guildId: rawEvent.guild_id || guild.id,
                         guildName: guild.name,
                         guildIcon: guildIconUrl,
-                        channelId: rawEvent.channel_id,
-                        creatorId: rawEvent.creator_id,
                         creatorName: rawEvent.creator?.username,
                         creatorAvatar: creatorAvatarUrl,
                         interestedCount: rawEvent.user_count,
