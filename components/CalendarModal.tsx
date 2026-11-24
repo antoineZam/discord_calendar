@@ -16,6 +16,7 @@ import { CalendarFilters } from "./CalendarFilters";
 import { CalendarGrid } from "./CalendarGrid";
 import { EventCard } from "./EventCard";
 import { EventDetails } from "./EventDetails";
+import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from "./Icons";
 
 const cl = classNameFactory("calendar-sync-");
 
@@ -172,9 +173,7 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
             <ModalHeader className={cl("header")}>
                 <div className={cl("header-left")}>
                     <h2 className={cl("title")}>
-                        <svg className={cl("title-icon")} viewBox="0 0 24 24" width="24" height="24">
-                            <path fill="currentColor" d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm-8 4H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z"/>
-                        </svg>
+                        <CalendarIcon size={24} className={cl("title-icon")} />
                         Calendar
                     </h2>
                     <span className={cl("date-display")}>
@@ -184,17 +183,13 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
                 <div className={cl("header-center")}>
                     <div className={cl("nav-buttons")}>
                         <button className={cl("nav-btn")} onClick={navigatePrevious}>
-                            <svg viewBox="0 0 24 24" width="16" height="16">
-                                <path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
-                            </svg>
+                            <ChevronLeftIcon />
                         </button>
                         <button className={cl("nav-btn", "today-btn")} onClick={navigateToday}>
                             Today
                         </button>
                         <button className={cl("nav-btn")} onClick={navigateNext}>
-                            <svg viewBox="0 0 24 24" width="16" height="16">
-                                <path fill="currentColor" d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
-                            </svg>
+                            <ChevronRightIcon />
                         </button>
                     </div>
                 </div>
