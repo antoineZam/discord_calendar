@@ -17,6 +17,8 @@ import { fetchProviderEvents } from "./providers";
 const STARTUP_DELAY_MS = 3000;
 /** How long synced events are considered fresh. */
 const STALE_AFTER_MS = MINUTE_MS;
+/** Scheduled events requests in flight at once: faster than one by one, gentle on rate limits. */
+const GUILD_FETCH_CONCURRENCY = 4;
 
 const FETCHERS: Record<EventSource, { enabled: () => boolean; fetch: () => Promise<CalendarEvent[]>; }> = {
     discord: { enabled: () => settings.store.discordEventsEnabled, fetch: fetchDiscordEvents },
@@ -171,15 +173,25 @@ function getOptedInEvents(): string[] {
 
 async function fetchDiscordEvents() {
     const optedIn = new Set(getOptedInEvents());
-    const events: CalendarEvent[] = [];
-
-    for (const guild of Object.values(GuildStore.getGuilds())) {
+    const perGuild = await mapConcurrent(Object.values(GuildStore.getGuilds()), GUILD_FETCH_CONCURRENCY, async guild => {
         const info = guildInfo(guild);
-        for (const raw of await fetchGuildEvents(guild.id))
-            events.push(toCalendarEvent(raw, info, optedIn));
-    }
+        return (await fetchGuildEvents(guild.id)).map(raw => toCalendarEvent(raw, info, optedIn));
+    });
+    return perGuild.flat();
+}
 
-    return events;
+/** Like `Promise.all(items.map(fn))`, with at most `limit` calls in flight. */
+async function mapConcurrent<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+    const results: R[] = new Array(items.length);
+    let next = 0;
+    const worker = async () => {
+        while (next < items.length) {
+            const index = next++;
+            results[index] = await fn(items[index]);
+        }
+    };
+    await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+    return results;
 }
 
 /** Asks the API, since the store only knows the events of guilds opened during this session. */
