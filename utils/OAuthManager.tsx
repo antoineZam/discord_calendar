@@ -13,7 +13,10 @@ import { settings } from "../settings";
 import { authorizationUrl, createPkce, exchangeCode, Provider, PROVIDERS } from "./providers";
 import { SOURCES } from "./sources";
 
-/** Opens the authorization dialog and stores the refresh token once the user completes it. */
+/**
+ * Opens the authorization dialog and stores the refresh token once the user completes it.
+ * Rejects if the dialog is closed first; failed attempts can be retried from the dialog.
+ */
 export async function authenticate(provider: Provider): Promise<void> {
     const { label, color } = SOURCES[provider];
     if (!PROVIDERS[provider].clientId()) throw new Error(`${label} client ID not configured`);
@@ -28,19 +31,17 @@ export async function authenticate(provider: Provider): Promise<void> {
                     showNotification({ title: "CalendarSync", body: `Successfully connected to ${label}!`, color });
                     resolve();
                 }}
-                onError={reject}
             />
-        ));
+        ), { onCloseCallback: () => reject(new Error("Authorization cancelled")) });
     });
 }
 
 interface OAuthModalProps extends ModalProps {
     provider: Provider;
     onSuccess: (refreshToken: string) => void;
-    onError: (error: Error) => void;
 }
 
-function OAuthModal({ transitionState, onClose, provider, onSuccess, onError }: OAuthModalProps) {
+function OAuthModal({ transitionState, onClose, provider, onSuccess }: OAuthModalProps) {
     const [step, setStep] = useState<"initial" | "code" | "loading" | "success" | "error">("initial");
     const [authCode, setAuthCode] = useState("");
     const [error, setError] = useState("");
@@ -72,7 +73,6 @@ function OAuthModal({ transitionState, onClose, provider, onSuccess, onError }: 
         } catch (err) {
             setStep("error");
             setError(err instanceof Error ? err.message : "Unknown error occurred");
-            onError(err instanceof Error ? err : new Error("Unknown error"));
         }
     }
 
