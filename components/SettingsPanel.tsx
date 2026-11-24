@@ -8,6 +8,7 @@ import { classNameFactory } from "@api/Styles";
 import { React, useState } from "@webpack/common";
 
 import { settings } from "../settings";
+import { logger } from "../utils/logger";
 import { oauthManager } from "../utils/OAuthManager";
 
 const cl = classNameFactory("calendar-sync-settings-");
@@ -33,7 +34,7 @@ export function SettingsPanel() {
             await oauthManager.authenticateGoogle();
             setGoogleAuthStatus("connected");
         } catch (err) {
-            console.error("[CalendarSync] Google auth failed:", err);
+            logger.error("Google auth failed:", err);
             setGoogleAuthStatus("disconnected");
         }
     }
@@ -51,7 +52,7 @@ export function SettingsPanel() {
             await oauthManager.authenticateOutlook();
             setOutlookAuthStatus("connected");
         } catch (err) {
-            console.error("[CalendarSync] Outlook auth failed:", err);
+            logger.error("Outlook auth failed:", err);
             setOutlookAuthStatus("disconnected");
         }
     }

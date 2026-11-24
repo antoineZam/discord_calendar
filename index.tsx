@@ -82,13 +82,9 @@ export default definePlugin({
 
     start() {
         calendarManager.startSync();
-
-        console.log("[CalendarSync] Plugin started");
     },
 
     stop() {
         calendarManager.stopSync();
-
-        console.log("[CalendarSync] Plugin stopped");
     },
 });
