@@ -45,26 +45,13 @@
 }
 
 /* ============================================
-   Modal Styles - Solid dark background
+   Modal Header (rendered in Discord's modal title)
    ============================================ */
-.calendar-sync-modal {
-    width: 95vw !important;
-    max-width: 1400px !important;
-    height: 85vh !important;
-    max-height: 900px !important;
-    background: #1e1f22 !important;
-    border-radius: var(--calendar-radius-lg) !important;
-    overflow: hidden !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
-}
-
 .calendar-sync-header {
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 24px;
-    background: #2b2d31;
-    border-bottom: 1px solid #3f4147;
     gap: 16px;
 }
 
@@ -180,9 +167,10 @@
    ============================================ */
 .calendar-sync-content {
     display: flex;
-    height: calc(100% - 64px);
+    height: min(75vh, 800px);
     overflow: hidden;
     background: #1e1f22;
+    border-radius: var(--calendar-radius-lg);
 }
 
 .calendar-sync-sidebar {

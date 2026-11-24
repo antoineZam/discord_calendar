@@ -5,8 +5,8 @@
  */
 
 import { classNameFactory } from "@api/Styles";
-import { ModalCloseButton, ModalContent, ModalHeader, ModalRoot, ModalSize, openModal } from "@utils/modal";
-import { React, useEffect, useMemo, useState } from "@webpack/common";
+import type { RenderModalProps } from "@vencord/discord-types";
+import { Modal, openModal, React, useEffect, useMemo, useState } from "@webpack/common";
 
 import { settings } from "../settings";
 import { CalendarEvent, CalendarView, EventFilters, EventSource } from "../types";
@@ -23,11 +23,7 @@ import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from "./Icons";
 const cl = classNameFactory("calendar-sync-");
 
 export function openCalendarModal() {
-    openModal(props => (
-        <ModalRoot {...props} size={ModalSize.LARGE} className={cl("modal")}>
-            <CalendarModalContent onClose={props.onClose} />
-        </ModalRoot>
-    ));
+    openModal(props => <CalendarModal {...props} />);
 }
 
 const VIEWS: CalendarView[] = ["month", "week", "day", "agenda"];
@@ -41,7 +37,7 @@ function initialFilters(): EventFilters {
     };
 }
 
-function CalendarModalContent({ onClose }: { onClose: () => void; }) {
+function CalendarModal(modalProps: RenderModalProps) {
     const events = React.useSyncExternalStore(calendarManager.subscribe, calendarManager.getEvents);
     const [loading, setLoading] = useState(!calendarManager.hasSynced);
     const [error, setError] = useState<string | null>(null);
@@ -80,44 +76,45 @@ function CalendarModalContent({ onClose }: { onClose: () => void; }) {
         }
     }
 
-    return (
-        <>
-            <ModalHeader className={cl("header")}>
-                <div className={cl("header-left")}>
-                    <h2 className={cl("title")}>
-                        <CalendarIcon size={24} className={cl("title-icon")} />
-                        Calendar
-                    </h2>
-                    <span className={cl("date-display")}>
-                        {formatViewTitle(currentDate, view)}
-                    </span>
+    const header = (
+        <div className={cl("header")}>
+            <div className={cl("header-left")}>
+                <h2 className={cl("title")}>
+                    <CalendarIcon size={24} className={cl("title-icon")} />
+                    Calendar
+                </h2>
+                <span className={cl("date-display")}>
+                    {formatViewTitle(currentDate, view)}
+                </span>
+            </div>
+            <div className={cl("header-center")}>
+                <div className={cl("nav-buttons")}>
+                    <button className={cl("nav-btn")} onClick={() => setCurrentDate(shiftDate(currentDate, view, -1))}>
+                        <ChevronLeftIcon />
+                    </button>
+                    <button className={cl("nav-btn", "today-btn")} onClick={() => setCurrentDate(new Date())}>
+                        Today
+                    </button>
+                    <button className={cl("nav-btn")} onClick={() => setCurrentDate(shiftDate(currentDate, view, 1))}>
+                        <ChevronRightIcon />
+                    </button>
                 </div>
-                <div className={cl("header-center")}>
-                    <div className={cl("nav-buttons")}>
-                        <button className={cl("nav-btn")} onClick={() => setCurrentDate(shiftDate(currentDate, view, -1))}>
-                            <ChevronLeftIcon />
+            </div>
+            <div className={cl("header-right")}>
+                <div className={cl("view-switcher")}>
+                    {VIEWS.map(v => (
+                        <button key={v} className={cl("view-btn", view === v && "active")} onClick={() => setView(v)}>
+                            {v.charAt(0).toUpperCase() + v.slice(1)}
                         </button>
-                        <button className={cl("nav-btn", "today-btn")} onClick={() => setCurrentDate(new Date())}>
-                            Today
-                        </button>
-                        <button className={cl("nav-btn")} onClick={() => setCurrentDate(shiftDate(currentDate, view, 1))}>
-                            <ChevronRightIcon />
-                        </button>
-                    </div>
+                    ))}
                 </div>
-                <div className={cl("header-right")}>
-                    <div className={cl("view-switcher")}>
-                        {VIEWS.map(v => (
-                            <button key={v} className={cl("view-btn", view === v && "active")} onClick={() => setView(v)}>
-                                {v.charAt(0).toUpperCase() + v.slice(1)}
-                            </button>
-                        ))}
-                    </div>
-                    <ModalCloseButton onClick={onClose} />
-                </div>
-            </ModalHeader>
+            </div>
+        </div>
+    );
 
-            <ModalContent className={cl("content")}>
+    return (
+        <Modal {...modalProps} size="xxl" title={header}>
+            <div className={cl("content")}>
                 <div className={cl("sidebar")}>
                     <CalendarFilters
                         filters={filters}
@@ -177,8 +174,8 @@ function CalendarModalContent({ onClose }: { onClose: () => void; }) {
                         onInterestChange={interested => changeInterest(selectedEvent, interested)}
                     />
                 )}
-            </ModalContent>
-        </>
+            </div>
+        </Modal>
     );
 }
 
