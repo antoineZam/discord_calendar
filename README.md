@@ -31,26 +31,18 @@ A Vencord plugin that unifies your calendar experience by syncing Outlook, Googl
 
 1. Open Discord Settings → Vencord → Plugins
 2. Find "CalendarSync" and enable it
-3. Click the settings cog to configure:
-   - Connect your Google Calendar (OAuth)
-   - Connect your Outlook Calendar (OAuth)
-   - Choose which Discord servers to sync events from
+3. Click the settings cog to connect Google Calendar and Outlook, choose the event sources and the sync interval
 
 ## OAuth Setup
 
 ### Google Calendar
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project
-3. Enable the Google Calendar API
-4. Create OAuth 2.0 credentials
-5. Add the Client ID in plugin settings
+No setup needed: click "Connect", authorize in the browser, then paste the code shown on the redirect page.
 
 ### Outlook Calendar
-1. Go to [Azure Portal](https://portal.azure.com/)
-2. Register a new application
-3. Add Calendar.Read permissions
-4. Create a client secret
-5. Add the Client ID in plugin settings
+1. Go to [Azure Portal](https://portal.azure.com/) and register a new application
+2. Add the redirect URI `https://login.microsoftonline.com/common/oauth2/nativeclient`
+3. Under API permissions, add `Calendars.Read`
+4. Copy the Application (client) ID into the plugin settings, then click "Connect"
 
 ## Usage
 
@@ -58,7 +50,7 @@ A Vencord plugin that unifies your calendar experience by syncing Outlook, Googl
 - Events are color-coded by source:
   - 🟣 Discord Events
   - 🔵 Google Calendar
-  - 🟠 Outlook Calendar
+  - 🔷 Outlook Calendar
 - Click on any Discord event to opt in/out
 - Use the filter buttons to show/hide event sources
 - Toggle "Show pending events" to hide events you haven't opted into
