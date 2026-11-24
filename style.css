@@ -1514,6 +1514,40 @@
 }
 
 /* ============================================
+   OAuth Dialog
+   ============================================ */
+.calendar-sync-oauth-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.calendar-sync-oauth-code {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.calendar-sync-oauth-success {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 24px;
+}
+
+.calendar-sync-oauth-success-icon {
+    width: 48px;
+    height: 48px;
+    background: #43b581;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ============================================
    Scrollbar Styling
    ============================================ */
 .calendar-sync-sidebar::-webkit-scrollbar,

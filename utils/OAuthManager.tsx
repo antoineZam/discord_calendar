@@ -6,15 +6,16 @@
 
 import { showNotification } from "@api/Notifications";
 import { classNameFactory } from "@api/Styles";
-import { ModalCloseButton, ModalContent, ModalHeader, ModalProps, ModalRoot, ModalSize, openModal } from "@utils/modal";
-import { Button, Forms, TextInput, useRef, useState } from "@webpack/common";
+import { Paragraph } from "@components/Paragraph";
+import type { ModalAction, RenderModalProps } from "@vencord/discord-types";
+import { Modal, openModal, TextInput, useRef, useState } from "@webpack/common";
 
 import { CheckIcon, SourceIcon } from "../components/Icons";
 import { settings } from "../settings";
 import { authorizationUrl, createPkce, exchangeCode, Provider, PROVIDERS } from "./providers";
 import { SOURCES } from "./sources";
 
-const cl = classNameFactory("calendar-sync-");
+const cl = classNameFactory("calendar-sync-oauth-");
 
 /**
  * Opens the authorization dialog and stores the refresh token once the user completes it.
@@ -39,153 +40,106 @@ export async function authenticate(provider: Provider): Promise<void> {
     });
 }
 
-interface OAuthModalProps extends ModalProps {
+type Step = "authorize" | "code" | "success";
+
+interface OAuthModalProps extends RenderModalProps {
     provider: Provider;
     onSuccess: (refreshToken: string) => void;
 }
 
-function OAuthModal({ transitionState, onClose, provider, onSuccess }: OAuthModalProps) {
-    const [step, setStep] = useState<"initial" | "code" | "loading" | "success" | "error">("initial");
+function OAuthModal({ provider, onSuccess, ...modalProps }: OAuthModalProps) {
+    const [step, setStep] = useState<Step>("authorize");
     const [authCode, setAuthCode] = useState("");
+    const [connecting, setConnecting] = useState(false);
     const [error, setError] = useState("");
     const codeVerifier = useRef("");
-    const { label: name, color } = SOURCES[provider];
+    const { label: name } = SOURCES[provider];
+
+    function goTo(next: Step) {
+        setError("");
+        setStep(next);
+    }
 
     async function openAuthorization() {
         const { verifier, challenge } = await createPkce();
         codeVerifier.current = verifier;
         VencordNative.native.openExternal(authorizationUrl(provider, challenge));
-        setStep("code");
+        goTo("code");
     }
 
     async function submitCode() {
-        if (!authCode.trim()) {
-            setError("Please enter the authorization code");
-            return;
-        }
+        const code = authCode.trim();
+        if (!code) return setError("Please enter the authorization code");
 
-        setStep("loading");
+        setConnecting(true);
         setError("");
 
         try {
-            const refreshToken = await exchangeCode(provider, authCode.trim(), codeVerifier.current);
+            const refreshToken = await exchangeCode(provider, code, codeVerifier.current);
             setStep("success");
             onSuccess(refreshToken);
 
-            setTimeout(() => onClose(), 1500);
+            setTimeout(modalProps.onClose, 1500);
         } catch (err) {
-            setStep("error");
             setError(err instanceof Error ? err.message : "Unknown error occurred");
+        } finally {
+            setConnecting(false);
         }
     }
 
+    const actions: Record<Step, ModalAction[]> = {
+        authorize: [
+            { text: `Open ${name} Authorization`, variant: "primary", onClick: openAuthorization },
+        ],
+        code: [
+            { text: "Back", variant: "secondary", onClick: () => goTo("authorize"), disabled: connecting },
+            { text: "Connect", variant: "primary", onClick: submitCode, loading: connecting },
+        ],
+        success: [],
+    };
+
     return (
-        <ModalRoot transitionState={transitionState} size={ModalSize.SMALL}>
-            <ModalHeader>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <Modal
+            {...modalProps}
+            size="sm"
+            title={
+                <span className={cl("title")}>
                     <SourceIcon source={provider} size={24} />
-                    <span style={{ fontSize: "16px", fontWeight: 600 }}>
-                        Connect {name}
-                    </span>
+                    Connect {name}
+                </span>
+            }
+            notice={error ? { message: error, type: "critical" } : undefined}
+            actions={actions[step]}
+        >
+            {step === "authorize" && (
+                <Paragraph>
+                    Click the button below to open the {name} authorization page in your browser.
+                    After granting access, copy the authorization code and paste it here.
+                </Paragraph>
+            )}
+
+            {step === "code" && (
+                <div className={cl("code")}>
+                    <Paragraph>
+                        After authorizing, you'll see an authorization code.
+                        Copy and paste that code below:
+                    </Paragraph>
+                    <TextInput
+                        placeholder="Paste authorization code here..."
+                        value={authCode}
+                        onChange={setAuthCode}
+                    />
                 </div>
-                <ModalCloseButton onClick={onClose} />
-            </ModalHeader>
-            <ModalContent style={{ padding: "16px" }}>
-                {step === "initial" && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                        <Forms.FormText>
-                            Click the button below to open the {name} authorization page in your browser.
-                            After granting access, copy the authorization code and paste it here.
-                        </Forms.FormText>
-                        <Button
-                            color={Button.Colors.BRAND}
-                            onClick={openAuthorization}
-                        >
-                            Open {name} Authorization
-                        </Button>
-                    </div>
-                )}
+            )}
 
-                {step === "code" && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                        <Forms.FormText>
-                            After authorizing, you'll see an authorization code.
-                            Copy and paste that code below:
-                        </Forms.FormText>
-                        <TextInput
-                            placeholder="Paste authorization code here..."
-                            value={authCode}
-                            onChange={setAuthCode}
-                        />
-                        {error && (
-                            <Forms.FormText style={{ color: "var(--text-danger)" }}>
-                                {error}
-                            </Forms.FormText>
-                        )}
-                        <div style={{ display: "flex", gap: "8px" }}>
-                            <Button
-                                color={Button.Colors.PRIMARY}
-                                onClick={() => setStep("initial")}
-                            >
-                                Back
-                            </Button>
-                            <Button
-                                color={Button.Colors.BRAND}
-                                onClick={submitCode}
-                            >
-                                Connect
-                            </Button>
-                        </div>
+            {step === "success" && (
+                <div className={cl("success")}>
+                    <div className={cl("success-icon")}>
+                        <CheckIcon size={24} />
                     </div>
-                )}
-
-                {step === "loading" && (
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px", padding: "24px" }}>
-                        <div className={cl("spinner")} style={{ borderTopColor: color }} />
-                        <Forms.FormText>Connecting...</Forms.FormText>
-                    </div>
-                )}
-
-                {step === "success" && (
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px", padding: "24px" }}>
-                        <div style={{
-                            width: "48px",
-                            height: "48px",
-                            background: "#43b581",
-                            color: "white",
-                            borderRadius: "50%",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center"
-                        }}>
-                            <CheckIcon size={24} />
-                        </div>
-                        <Forms.FormText style={{ fontSize: "16px", fontWeight: 500 }}>
-                            Connected Successfully!
-                        </Forms.FormText>
-                    </div>
-                )}
-
-                {step === "error" && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                        <div style={{
-                            background: "rgba(237, 66, 69, 0.1)",
-                            padding: "12px",
-                            borderRadius: "8px"
-                        }}>
-                            <Forms.FormText style={{ color: "var(--text-danger)" }}>
-                                {error}
-                            </Forms.FormText>
-                        </div>
-                        <Button
-                            color={Button.Colors.PRIMARY}
-                            onClick={() => setStep("initial")}
-                        >
-                            Try Again
-                        </Button>
-                    </div>
-                )}
-            </ModalContent>
-        </ModalRoot>
+                    <Paragraph size="md" weight="medium">Connected Successfully!</Paragraph>
+                </div>
+            )}
+        </Modal>
     );
 }
