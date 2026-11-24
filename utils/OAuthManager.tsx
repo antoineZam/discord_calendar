@@ -5,7 +5,7 @@
  */
 
 import { showNotification } from "@api/Notifications";
-import { ModalCloseButton, ModalContent, ModalHeader, ModalRoot, ModalSize,openModal } from "@utils/modal";
+import { ModalCloseButton, ModalContent, ModalHeader, ModalProps, ModalRoot, ModalSize, openModal } from "@utils/modal";
 import { Button, Forms, React, TextInput, useState } from "@webpack/common";
 
 // Use VencordNative for opening external URLs
@@ -87,15 +87,14 @@ export class OAuthManager {
 }
 
 // OAuth Modal Component
-interface OAuthModalProps {
-    onClose: () => void;
+interface OAuthModalProps extends ModalProps {
     provider: "google" | "outlook";
     clientId: string;
     onSuccess: (refreshToken: string) => void;
     onError: (error: Error) => void;
 }
 
-function OAuthModal({ onClose, provider, clientId, onSuccess, onError }: OAuthModalProps) {
+function OAuthModal({ transitionState, onClose, provider, clientId, onSuccess, onError }: OAuthModalProps) {
     const [step, setStep] = useState<"initial" | "code" | "loading" | "success" | "error">("initial");
     const [authCode, setAuthCode] = useState("");
     const [error, setError] = useState("");
@@ -197,7 +196,7 @@ function OAuthModal({ onClose, provider, clientId, onSuccess, onError }: OAuthMo
     }
 
     return (
-        <ModalRoot size={ModalSize.SMALL}>
+        <ModalRoot transitionState={transitionState} size={ModalSize.SMALL}>
             <ModalHeader>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                     {provider === "google" ? <GoogleIcon /> : <OutlookIcon />}
