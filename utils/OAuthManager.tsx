@@ -5,6 +5,7 @@
  */
 
 import { showNotification } from "@api/Notifications";
+import { classNameFactory } from "@api/Styles";
 import { ModalCloseButton, ModalContent, ModalHeader, ModalProps, ModalRoot, ModalSize, openModal } from "@utils/modal";
 import { Button, Forms, TextInput, useRef, useState } from "@webpack/common";
 
@@ -12,6 +13,8 @@ import { CheckIcon, SourceIcon } from "../components/Icons";
 import { settings } from "../settings";
 import { authorizationUrl, createPkce, exchangeCode, Provider, PROVIDERS } from "./providers";
 import { SOURCES } from "./sources";
+
+const cl = classNameFactory("calendar-sync-");
 
 /**
  * Opens the authorization dialog and stores the refresh token once the user completes it.
@@ -138,16 +141,8 @@ function OAuthModal({ transitionState, onClose, provider, onSuccess }: OAuthModa
 
                 {step === "loading" && (
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px", padding: "24px" }}>
-                        <div style={{
-                            width: "32px",
-                            height: "32px",
-                            border: "3px solid var(--background-modifier-accent)",
-                            borderTopColor: color,
-                            borderRadius: "50%",
-                            animation: "spin 0.8s linear infinite"
-                        }} />
+                        <div className={cl("spinner")} style={{ borderTopColor: color }} />
                         <Forms.FormText>Connecting...</Forms.FormText>
-                        <style>{"@keyframes spin { to { transform: rotate(360deg); } }"}</style>
                     </div>
                 )}
 
