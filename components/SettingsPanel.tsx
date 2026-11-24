@@ -9,7 +9,7 @@ import { React, useState } from "@webpack/common";
 
 import { settings } from "../settings";
 import { logger } from "../utils/logger";
-import { oauthManager } from "../utils/OAuthManager";
+import { authenticate } from "../utils/OAuthManager";
 import { GoogleIcon, OutlookIcon } from "./Icons";
 
 const cl = classNameFactory("calendar-sync-settings-");
@@ -32,7 +32,7 @@ export function SettingsPanel() {
 
         setGoogleAuthStatus("connecting");
         try {
-            await oauthManager.authenticateGoogle();
+            await authenticate("google");
             setGoogleAuthStatus("connected");
         } catch (err) {
             logger.error("Google auth failed:", err);
@@ -50,7 +50,7 @@ export function SettingsPanel() {
 
         setOutlookAuthStatus("connecting");
         try {
-            await oauthManager.authenticateOutlook();
+            await authenticate("outlook");
             setOutlookAuthStatus("connected");
         } catch (err) {
             logger.error("Outlook auth failed:", err);

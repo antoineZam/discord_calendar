@@ -9,18 +9,13 @@ import { GuildScheduledEventStore, GuildStore, RestAPI } from "@webpack/common";
 import { settings } from "../settings";
 import { CalendarEvent, DiscordGuildEvent, GoogleCalendarEvent, OutlookCalendarEvent } from "../types";
 import { logger } from "./logger";
-import { GOOGLE_CLIENT_ID } from "./OAuthManager";
+import { getAccessToken } from "./providers";
 
 export class CalendarManager {
     private syncInterval: NodeJS.Timeout | null = null;
     private cachedEvents: CalendarEvent[] = [];
     private lastSync: Date | null = null;
 
-    // Token storage
-    private googleAccessToken: string | null = null;
-    private googleTokenExpiry: number = 0;
-    private outlookAccessToken: string | null = null;
-    private outlookTokenExpiry: number = 0;
 
     startSync() {
         // Delay initial sync to allow Discord stores to load
@@ -210,7 +205,7 @@ export class CalendarManager {
 
     // Google Calendar Events
     async fetchGoogleEvents(): Promise<CalendarEvent[]> {
-        const accessToken = await this.getGoogleAccessToken();
+        const accessToken = await getAccessToken("google");
         if (!accessToken) return [];
 
         const now = new Date();
@@ -280,7 +275,7 @@ export class CalendarManager {
 
     // Outlook Calendar Events
     async fetchOutlookEvents(): Promise<CalendarEvent[]> {
-        const accessToken = await this.getOutlookAccessToken();
+        const accessToken = await getAccessToken("outlook");
         if (!accessToken) return [];
 
         const now = new Date();
@@ -337,72 +332,6 @@ export class CalendarManager {
         }
 
         return events;
-    }
-
-    // Token management
-    private async getGoogleAccessToken(): Promise<string | null> {
-        if (this.googleAccessToken && Date.now() < this.googleTokenExpiry) {
-            return this.googleAccessToken;
-        }
-
-        const refreshToken = settings.store.googleRefreshToken;
-        if (!refreshToken) return null;
-
-        try {
-            const response = await fetch("https://oauth2.googleapis.com/token", {
-                method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: new URLSearchParams({
-                    client_id: GOOGLE_CLIENT_ID,
-                    refresh_token: refreshToken,
-                    grant_type: "refresh_token",
-                }),
-            });
-
-            if (!response.ok) throw new Error("Token refresh failed");
-
-            const data = await response.json();
-            this.googleAccessToken = data.access_token;
-            this.googleTokenExpiry = Date.now() + (data.expires_in * 1000) - 60000;
-
-            return this.googleAccessToken;
-        } catch (err) {
-            logger.error("Failed to refresh Google token:", err);
-            return null;
-        }
-    }
-
-    private async getOutlookAccessToken(): Promise<string | null> {
-        if (this.outlookAccessToken && Date.now() < this.outlookTokenExpiry) {
-            return this.outlookAccessToken;
-        }
-
-        const refreshToken = settings.store.outlookRefreshToken;
-        if (!refreshToken) return null;
-
-        try {
-            const response = await fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", {
-                method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: new URLSearchParams({
-                    client_id: settings.store.outlookClientId,
-                    refresh_token: refreshToken,
-                    grant_type: "refresh_token",
-                    scope: "Calendars.Read offline_access",
-                }),
-            });
-
-            if (!response.ok) throw new Error("Token refresh failed");
-
-            const data = await response.json();
-            this.outlookAccessToken = data.access_token;
-            this.outlookTokenExpiry = Date.now() + (data.expires_in * 1000) - 60000;
-
-            return this.outlookAccessToken;
-        } catch (err) {
-            logger.error("Failed to refresh Outlook token:", err);
-            return null;
-        }
     }
 
     // Opt-in management
