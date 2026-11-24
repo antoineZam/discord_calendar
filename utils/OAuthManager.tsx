@@ -8,6 +8,8 @@ import { showNotification } from "@api/Notifications";
 import { ModalCloseButton, ModalContent, ModalHeader, ModalProps, ModalRoot, ModalSize, openModal } from "@utils/modal";
 import { Button, Forms, React, TextInput, useState } from "@webpack/common";
 
+import { settings } from "../settings";
+
 // Use VencordNative for opening external URLs
 declare const VencordNative: {
     native: {
@@ -19,21 +21,7 @@ declare const VencordNative: {
 export const GOOGLE_CLIENT_ID = "634850353269-g82ekhtmoilfpdjbcvedpb0i8ntc7d3c.apps.googleusercontent.com";
 export const GOOGLE_REDIRECT_URI = "https://antoinezam.github.io/discord_calendar";
 
-interface Settings {
-    store: {
-        googleRefreshToken: string;
-        outlookClientId: string;
-        outlookRefreshToken: string;
-    };
-}
-
 export class OAuthManager {
-    private settings: Settings;
-
-    constructor(settings: Settings) {
-        this.settings = settings;
-    }
-
     // Google OAuth - Opens modal for user to paste auth code
     async authenticateGoogle(): Promise<void> {
         return new Promise((resolve, reject) => {
@@ -43,7 +31,7 @@ export class OAuthManager {
                     provider="google"
                     clientId={GOOGLE_CLIENT_ID}
                     onSuccess={refreshToken => {
-                        this.settings.store.googleRefreshToken = refreshToken;
+                        settings.store.googleRefreshToken = refreshToken;
                         showNotification({
                             title: "CalendarSync",
                             body: "Successfully connected to Google Calendar!",
@@ -59,7 +47,7 @@ export class OAuthManager {
 
     // Outlook OAuth - Opens modal for user to paste auth code
     async authenticateOutlook(): Promise<void> {
-        const clientId = this.settings.store.outlookClientId;
+        const clientId = settings.store.outlookClientId;
         if (!clientId) {
             throw new Error("Outlook Client ID not configured");
         }
@@ -71,7 +59,7 @@ export class OAuthManager {
                     provider="outlook"
                     clientId={clientId}
                     onSuccess={refreshToken => {
-                        this.settings.store.outlookRefreshToken = refreshToken;
+                        settings.store.outlookRefreshToken = refreshToken;
                         showNotification({
                             title: "CalendarSync",
                             body: "Successfully connected to Outlook Calendar!",
@@ -85,6 +73,8 @@ export class OAuthManager {
         });
     }
 }
+
+export const oauthManager = new OAuthManager();
 
 // OAuth Modal Component
 interface OAuthModalProps extends ModalProps {

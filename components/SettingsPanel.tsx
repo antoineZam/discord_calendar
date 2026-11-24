@@ -7,7 +7,8 @@
 import { classNameFactory } from "@api/Styles";
 import { React, useState } from "@webpack/common";
 
-import { oauthManager, settings } from "../index";
+import { settings } from "../settings";
+import { oauthManager } from "../utils/OAuthManager";
 
 const cl = classNameFactory("calendar-sync-settings-");
 

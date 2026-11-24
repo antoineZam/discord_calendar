@@ -8,8 +8,9 @@ import { classNameFactory } from "@api/Styles";
 import { ModalCloseButton, ModalContent, ModalHeader, ModalRoot, ModalSize, openModal } from "@utils/modal";
 import { React, useEffect, useMemo, useState } from "@webpack/common";
 
-import { calendarManager, settings } from "../index";
+import { settings } from "../settings";
 import { CalendarEvent, CalendarViewState } from "../types";
+import { calendarManager } from "../utils/CalendarManager";
 import { CalendarFilters } from "./CalendarFilters";
 import { CalendarGrid } from "./CalendarGrid";
 import { EventCard } from "./EventCard";

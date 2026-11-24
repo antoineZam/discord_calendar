@@ -6,29 +6,11 @@
 
 import { GuildScheduledEventStore, GuildStore, RestAPI } from "@webpack/common";
 
-import {
-    CalendarEvent,
-    DiscordGuildEvent,
-    GoogleCalendarEvent,
-    OutlookCalendarEvent } from "../types";
+import { settings } from "../settings";
+import { CalendarEvent, DiscordGuildEvent, GoogleCalendarEvent, OutlookCalendarEvent } from "../types";
 import { GOOGLE_CLIENT_ID } from "./OAuthManager";
 
-interface Settings {
-    store: {
-        googleCalendarEnabled: boolean;
-        googleRefreshToken: string;
-        outlookCalendarEnabled: boolean;
-        outlookClientId: string;
-        outlookRefreshToken: string;
-        discordEventsEnabled: boolean;
-        showPendingEvents: boolean;
-        syncIntervalMinutes: number;
-        optedInEvents: string;
-    };
-}
-
 export class CalendarManager {
-    private settings: Settings;
     private syncInterval: NodeJS.Timeout | null = null;
     private cachedEvents: CalendarEvent[] = [];
     private lastSync: Date | null = null;
@@ -39,10 +21,6 @@ export class CalendarManager {
     private outlookAccessToken: string | null = null;
     private outlookTokenExpiry: number = 0;
 
-    constructor(settings: Settings) {
-        this.settings = settings;
-    }
-
     startSync() {
         // Delay initial sync to allow Discord stores to load
         console.log("[CalendarSync] Waiting for Discord to fully load...");
@@ -51,12 +29,12 @@ export class CalendarManager {
             this.syncAllCalendars();
 
             // Set up interval
-            const intervalMs = this.settings.store.syncIntervalMinutes * 60 * 1000;
+            const intervalMs = settings.store.syncIntervalMinutes * 60 * 1000;
             this.syncInterval = setInterval(() => {
                 this.syncAllCalendars();
             }, intervalMs);
 
-            console.log(`[CalendarSync] Started sync with ${this.settings.store.syncIntervalMinutes}min interval`);
+            console.log(`[CalendarSync] Started sync with ${settings.store.syncIntervalMinutes}min interval`);
         }, 3000); // Wait 3 seconds for Discord to load
     }
 
@@ -74,7 +52,7 @@ export class CalendarManager {
         const events: CalendarEvent[] = [];
 
         // Sync Discord events
-        if (this.settings.store.discordEventsEnabled) {
+        if (settings.store.discordEventsEnabled) {
             try {
                 const discordEvents = await this.fetchDiscordEvents();
                 events.push(...discordEvents);
@@ -84,7 +62,7 @@ export class CalendarManager {
         }
 
         // Sync Google Calendar
-        if (this.settings.store.googleCalendarEnabled && this.settings.store.googleRefreshToken) {
+        if (settings.store.googleCalendarEnabled && settings.store.googleRefreshToken) {
             try {
                 const googleEvents = await this.fetchGoogleEvents();
                 events.push(...googleEvents);
@@ -94,7 +72,7 @@ export class CalendarManager {
         }
 
         // Sync Outlook Calendar
-        if (this.settings.store.outlookCalendarEnabled && this.settings.store.outlookRefreshToken) {
+        if (settings.store.outlookCalendarEnabled && settings.store.outlookRefreshToken) {
             try {
                 const outlookEvents = await this.fetchOutlookEvents();
                 events.push(...outlookEvents);
@@ -371,7 +349,7 @@ export class CalendarManager {
             return this.googleAccessToken;
         }
 
-        const refreshToken = this.settings.store.googleRefreshToken;
+        const refreshToken = settings.store.googleRefreshToken;
         if (!refreshToken) return null;
 
         try {
@@ -403,7 +381,7 @@ export class CalendarManager {
             return this.outlookAccessToken;
         }
 
-        const refreshToken = this.settings.store.outlookRefreshToken;
+        const refreshToken = settings.store.outlookRefreshToken;
         if (!refreshToken) return null;
 
         try {
@@ -411,7 +389,7 @@ export class CalendarManager {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: new URLSearchParams({
-                    client_id: this.settings.store.outlookClientId,
+                    client_id: settings.store.outlookClientId,
                     refresh_token: refreshToken,
                     grant_type: "refresh_token",
                     scope: "Calendars.Read offline_access",
@@ -434,14 +412,14 @@ export class CalendarManager {
     // Opt-in management
     getOptedInEvents(): string[] {
         try {
-            return JSON.parse(this.settings.store.optedInEvents || "[]");
+            return JSON.parse(settings.store.optedInEvents || "[]");
         } catch {
             return [];
         }
     }
 
     setOptedInEvents(events: string[]) {
-        this.settings.store.optedInEvents = JSON.stringify(events);
+        settings.store.optedInEvents = JSON.stringify(events);
     }
 
     async optInToEvent(eventId: string, guildId: string) {
@@ -498,3 +476,4 @@ export class CalendarManager {
     }
 }
 
+export const calendarManager = new CalendarManager();
