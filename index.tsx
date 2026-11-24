@@ -10,7 +10,6 @@ import ErrorBoundary from "@components/ErrorBoundary";
 import { Devs } from "@utils/constants";
 import definePlugin from "@utils/types";
 import { findComponentByCodeLazy } from "@webpack";
-import type { PropsWithChildren } from "react";
 
 import { openCalendarModal } from "./components/CalendarModal";
 import { CalendarIcon } from "./components/Icons";
@@ -18,17 +17,15 @@ import { SettingsPanel } from "./components/SettingsPanel";
 import { settings } from "./settings";
 import { calendarManager } from "./utils/CalendarManager";
 
-// Find Discord's HeaderBarIcon component
-const HeaderBarIcon = findComponentByCodeLazy(".HEADER_BAR_BADGE_TOP:", '.iconBadge,"top"');
+const HeaderBarIcon = findComponentByCodeLazy(".HEADER_BAR_BADGE_BOTTOM,", 'position:"bottom"');
 
 // HeaderBarIcon passes its own props to the icon, which our icon does not understand
 const HeaderIcon = () => <CalendarIcon size={24} className="vc-calendar-icon" />;
 
-// Calendar Header Bar Button
-function CalendarHeaderButton({ className }: { className: string }) {
+function CalendarHeaderButton() {
     return (
         <HeaderBarIcon
-            className={`vc-calendar-btn ${className}`}
+            className="vc-calendar-btn"
             onClick={openCalendarModal}
             tooltip="Calendar"
             icon={HeaderIcon}
@@ -49,28 +46,22 @@ export default definePlugin({
         "Open Calendar": openCalendarModal,
     },
 
-    // Patch to add calendar icon to the header bar (same location as VencordToolbox)
     patches: [
         {
             find: '?"BACK_FORWARD_NAVIGATION":',
             replacement: {
-                match: /(?<=trailing:.{0,50})\i\.Fragment,\{(?=.+?className:(\i))/,
-                replace: "$self.TrailingWrapper,{className:$1,"
+                // Prepend to the trailing children rather than wrapping them, which VencordToolbox already does
+                match: /(trailing:.{0,150}?\{children:\[)/,
+                replace: "$1$self.renderHeaderButton(),"
             }
         }
     ],
 
-    // Wrapper component that adds our calendar button
-    TrailingWrapper({ children, className }: PropsWithChildren<{ className: string }>) {
-        return (
-            <>
-                {children}
-                <ErrorBoundary noop>
-                    <CalendarHeaderButton className={className} />
-                </ErrorBoundary>
-            </>
-        );
-    },
+    renderHeaderButton: () => (
+        <ErrorBoundary noop>
+            <CalendarHeaderButton />
+        </ErrorBoundary>
+    ),
 
     start() {
         calendarManager.start();
