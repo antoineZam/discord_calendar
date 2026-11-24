@@ -8,6 +8,7 @@ import { classNameFactory } from "@api/Styles";
 import { React } from "@webpack/common";
 
 import { CalendarEvent } from "../types";
+import { formatShortDate, formatTime, formatTimeRange, isSameDay } from "../utils/date";
 import { sourceColor, sourceLabel } from "../utils/sources";
 import { AccountCircleIcon, ClockIcon, LocationIcon, PeopleIcon, SourceIcon } from "./Icons";
 
@@ -20,9 +21,6 @@ interface EventCardProps {
 }
 
 export function EventCard({ event, compact = false, onClick }: EventCardProps) {
-    const startTime = new Date(event.startTime);
-    const endTime = new Date(event.endTime);
-
     if (compact) {
         return (
             <button
@@ -34,7 +32,7 @@ export function EventCard({ event, compact = false, onClick }: EventCardProps) {
                 <div className={cl("event-card-content")}>
                     <span className={cl("event-card-title")}>{event.title}</span>
                     <span className={cl("event-card-time")}>
-                        {formatEventTime(startTime, endTime, event.allDay)}
+                        {formatEventRange(event)}
                     </span>
                 </div>
                 <span className={cl("event-card-source")}>
@@ -80,7 +78,7 @@ export function EventCard({ event, compact = false, onClick }: EventCardProps) {
                 <div className={cl("event-card-info")}>
                     <div className={cl("event-card-row")}>
                         <ClockIcon size={14} />
-                        <span>{formatEventTime(startTime, endTime, event.allDay)}</span>
+                        <span>{formatEventRange(event)}</span>
                     </div>
 
                     {event.location && (
@@ -115,20 +113,12 @@ export function EventCard({ event, compact = false, onClick }: EventCardProps) {
     );
 }
 
-function formatEventTime(start: Date, end: Date, allDay?: boolean): string {
-    if (allDay) {
-        return "All day";
-    }
+function formatEventRange({ startTime, endTime, allDay }: CalendarEvent) {
+    if (allDay) return "All day";
 
-    const sameDay = start.toDateString() === end.toDateString();
-    const timeOptions: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit" };
-    const dateOptions: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
-
-    if (sameDay) {
-        return `${start.toLocaleDateString(undefined, dateOptions)} · ${start.toLocaleTimeString(undefined, timeOptions)} - ${end.toLocaleTimeString(undefined, timeOptions)}`;
-    }
-
-    return `${start.toLocaleDateString(undefined, dateOptions)} ${start.toLocaleTimeString(undefined, timeOptions)} - ${end.toLocaleDateString(undefined, dateOptions)} ${end.toLocaleTimeString(undefined, timeOptions)}`;
+    return isSameDay(startTime, endTime)
+        ? `${formatShortDate(startTime)} · ${formatTimeRange(startTime, endTime)}`
+        : `${formatShortDate(startTime)} ${formatTime(startTime)} - ${formatShortDate(endTime)} ${formatTime(endTime)}`;
 }
 
 function truncateText(text: string, maxLength: number): string {

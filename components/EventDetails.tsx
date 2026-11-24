@@ -9,6 +9,7 @@ import { React } from "@webpack/common";
 import type { ComponentType } from "react";
 
 import { CalendarEvent, DiscordEventEntityType } from "../types";
+import { formatFullDate, formatTimeRange } from "../utils/date";
 import { sourceColor, sourceLabel } from "../utils/sources";
 import { AccountCircleIcon, CalendarIcon, CheckCircleIcon, CheckIcon, CloseIcon, IconProps, LocationIcon, MicIcon, PeopleIcon, PersonIcon, SourceIcon, StageIcon } from "./Icons";
 
@@ -29,8 +30,6 @@ const ENTITY_TYPES: Record<DiscordEventEntityType, { label: string; Icon: Compon
 
 export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetailsProps) {
     const entityType = event.entityType && ENTITY_TYPES[event.entityType];
-    const startTime = new Date(event.startTime);
-    const endTime = new Date(event.endTime);
 
     return (
         <div className={cl("event-details")}>
@@ -89,21 +88,11 @@ export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetails
                         <CalendarIcon size={18} />
                         <div className={cl("event-details-datetime")}>
                             <span className={cl("date")}>
-                                {startTime.toLocaleDateString(undefined, {
-                                    weekday: "long",
-                                    month: "long",
-                                    day: "numeric",
-                                    year: "numeric"
-                                })}
+                                {formatFullDate(event.startTime)}
                             </span>
-                            {!event.allDay && (
-                                <span className={cl("time")}>
-                                    {startTime.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
-                                    {" - "}
-                                    {endTime.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
-                                </span>
-                            )}
-                            {event.allDay && <span className={cl("time")}>All day</span>}
+                            <span className={cl("time")}>
+                                {event.allDay ? "All day" : formatTimeRange(event.startTime, event.endTime)}
+                            </span>
                         </div>
                     </div>
                 </div>

@@ -9,8 +9,9 @@ import { ModalCloseButton, ModalContent, ModalHeader, ModalRoot, ModalSize, open
 import { React, useEffect, useMemo, useState } from "@webpack/common";
 
 import { settings } from "../settings";
-import { CalendarEvent, CalendarViewState, EventFilters, EventSource } from "../types";
+import { CalendarEvent, CalendarView, CalendarViewState, EventFilters, EventSource } from "../types";
 import { calendarManager } from "../utils/CalendarManager";
+import { addDays, formatFullDate, formatMediumDate, formatMonthYear, getMonthWeeks, isSameDay, shiftDate, startOfMonth, startOfWeek, WEEKDAY_NAMES } from "../utils/date";
 import { logger } from "../utils/logger";
 import { SOURCE_KEYS } from "../utils/sources";
 import { CalendarFilters } from "./CalendarFilters";
@@ -36,7 +37,7 @@ interface CalendarModalProps {
 function CalendarModalContent({ onClose }: CalendarModalProps) {
     const [viewState, setViewState] = useState<CalendarViewState>({
         currentDate: new Date(),
-        view: settings.store.defaultCalendarView as CalendarViewState["view"] || "month",
+        view: settings.store.defaultCalendarView as CalendarView || "month",
         selectedEvent: null,
         filters: {
             sources: {
@@ -62,10 +63,8 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
         setError(null);
 
         try {
-            const allEvents = await calendarManager.getAllEvents(
-                getMonthStart(viewState.currentDate),
-                getMonthEnd(viewState.currentDate)
-            );
+            const gridStart = startOfWeek(startOfMonth(viewState.currentDate));
+            const allEvents = await calendarManager.getAllEvents(gridStart, addDays(gridStart, 42));
             setEvents(allEvents);
         } catch (err) {
             logger.error("Failed to fetch events:", err);
@@ -87,19 +86,8 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
         return counts;
     }, [events]);
 
-    // Navigation functions
-    function navigatePrevious() {
-        setViewState(prev => ({
-            ...prev,
-            currentDate: navigateDate(prev.currentDate, prev.view, -1),
-        }));
-    }
-
-    function navigateNext() {
-        setViewState(prev => ({
-            ...prev,
-            currentDate: navigateDate(prev.currentDate, prev.view, 1),
-        }));
+    function navigate(direction: 1 | -1) {
+        setViewState(prev => ({ ...prev, currentDate: shiftDate(prev.currentDate, prev.view, direction) }));
     }
 
     function navigateToday() {
@@ -109,7 +97,7 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
         }));
     }
 
-    function setView(view: CalendarViewState["view"]) {
+    function setView(view: CalendarView) {
         setViewState(prev => ({ ...prev, view }));
     }
 
@@ -174,18 +162,18 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
                         Calendar
                     </h2>
                     <span className={cl("date-display")}>
-                        {formatDateHeader(viewState.currentDate, viewState.view)}
+                        {formatViewTitle(viewState.currentDate, viewState.view)}
                     </span>
                 </div>
                 <div className={cl("header-center")}>
                     <div className={cl("nav-buttons")}>
-                        <button className={cl("nav-btn")} onClick={navigatePrevious}>
+                        <button className={cl("nav-btn")} onClick={() => navigate(-1)}>
                             <ChevronLeftIcon />
                         </button>
                         <button className={cl("nav-btn", "today-btn")} onClick={navigateToday}>
                             Today
                         </button>
-                        <button className={cl("nav-btn")} onClick={navigateNext}>
+                        <button className={cl("nav-btn")} onClick={() => navigate(1)}>
                             <ChevronRightIcon />
                         </button>
                     </div>
@@ -282,30 +270,14 @@ function MiniCalendar({
     onDateSelect: (date: Date) => void;
     events: CalendarEvent[];
 }) {
-    const monthStart = getMonthStart(currentDate);
-    const monthEnd = getMonthEnd(currentDate);
-    const startDate = getWeekStart(monthStart);
-
-    const weeks: Date[][] = [];
-    const current = new Date(startDate);
-
-    while (current <= monthEnd || weeks.length < 6) {
-        const week: Date[] = [];
-        for (let i = 0; i < 7; i++) {
-            week.push(new Date(current));
-            current.setDate(current.getDate() + 1);
-        }
-        weeks.push(week);
-        if (weeks.length >= 6) break;
-    }
-
+    const weeks = getMonthWeeks(currentDate);
     const today = new Date();
 
     return (
         <div className={cl("mini-calendar-grid")}>
             <div className={cl("mini-calendar-header")}>
-                {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => (
-                    <span key={i} className={cl("mini-day-header")}>{day}</span>
+                {WEEKDAY_NAMES.narrow.map((name, i) => (
+                    <span key={i} className={cl("mini-day-header")}>{name}</span>
                 ))}
             </div>
             {weeks.map((week, wi) => (
@@ -314,7 +286,7 @@ function MiniCalendar({
                         const isCurrentMonth = day.getMonth() === currentDate.getMonth();
                         const isToday = isSameDay(day, today);
                         const isSelected = isSameDay(day, currentDate);
-                        const hasEvents = events.some(e => isSameDay(new Date(e.startTime), day));
+                        const hasEvents = events.some(e => isSameDay(e.startTime, day));
 
                         return (
                             <button
@@ -338,75 +310,20 @@ function MiniCalendar({
     );
 }
 
-// Helper functions
-function getMonthStart(date: Date): Date {
-    return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
-function getMonthEnd(date: Date): Date {
-    return new Date(date.getFullYear(), date.getMonth() + 1, 0);
-}
-
-function getWeekStart(date: Date): Date {
-    const d = new Date(date);
-    const day = d.getDay();
-    d.setDate(d.getDate() - day);
-    return d;
-}
-
-function isSameDay(a: Date, b: Date): boolean {
-    return a.getFullYear() === b.getFullYear() &&
-           a.getMonth() === b.getMonth() &&
-           a.getDate() === b.getDate();
-}
-
-function navigateDate(date: Date, view: CalendarViewState["view"], direction: number): Date {
-    const d = new Date(date);
+function formatViewTitle(date: Date, view: CalendarView) {
     switch (view) {
-        case "month":
-            d.setMonth(d.getMonth() + direction);
-            break;
-        case "week":
-            d.setDate(d.getDate() + (7 * direction));
-            break;
-        case "day":
-            d.setDate(d.getDate() + direction);
-            break;
-        case "agenda":
-            d.setDate(d.getDate() + (7 * direction));
-            break;
+        case "month": return formatMonthYear(date);
+        case "week": return `Week of ${formatMediumDate(startOfWeek(date))}`;
+        case "day": return formatFullDate(date);
+        case "agenda": return "Upcoming Events";
     }
-    return d;
-}
-
-function formatDateHeader(date: Date, view: CalendarViewState["view"]): string {
-    const options: Intl.DateTimeFormatOptions = {};
-
-    switch (view) {
-        case "month":
-            options.month = "long";
-            options.year = "numeric";
-            break;
-        case "week":
-            return `Week of ${date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`;
-        case "day":
-            options.weekday = "long";
-            options.month = "long";
-            options.day = "numeric";
-            options.year = "numeric";
-            break;
-        case "agenda":
-            return "Upcoming Events";
-    }
-
-    return date.toLocaleDateString(undefined, options);
 }
 
 function getUpcomingEvents(events: CalendarEvent[], limit: number): CalendarEvent[] {
     const now = new Date();
     return events
-        .filter(e => new Date(e.startTime) >= now)
-        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+        .filter(e => e.startTime >= now)
+        .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
         .slice(0, limit);
 }
 

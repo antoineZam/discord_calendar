@@ -143,9 +143,11 @@ export interface OutlookCalendarEvent {
     };
 }
 
+export type CalendarView = "month" | "week" | "day" | "agenda";
+
 export interface CalendarViewState {
     currentDate: Date;
-    view: "month" | "week" | "day" | "agenda";
+    view: CalendarView;
     selectedEvent: CalendarEvent | null;
     filters: EventFilters;
 }
