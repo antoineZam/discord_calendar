@@ -8,7 +8,7 @@ import type { Guild, GuildScheduledEvent } from "@vencord/discord-types";
 import { GuildScheduledEventStore, GuildStore, RestAPI } from "@webpack/common";
 
 import { settings } from "../settings";
-import { CalendarEvent } from "../types";
+import { CalendarEvent, EventSource } from "../types";
 import { HOUR_MS, MINUTE_MS } from "./date";
 import { logger } from "./logger";
 import { fetchProviderEvents } from "./providers";
@@ -17,6 +17,12 @@ import { fetchProviderEvents } from "./providers";
 const STARTUP_DELAY_MS = 3000;
 /** How long synced events are considered fresh. */
 const STALE_AFTER_MS = MINUTE_MS;
+
+const FETCHERS: Record<EventSource, { enabled: () => boolean; fetch: () => Promise<CalendarEvent[]>; }> = {
+    discord: { enabled: () => settings.store.discordEventsEnabled, fetch: fetchDiscordEvents },
+    google: { enabled: () => settings.store.googleCalendarEnabled, fetch: () => fetchProviderEvents("google") },
+    outlook: { enabled: () => settings.store.outlookCalendarEnabled, fetch: () => fetchProviderEvents("outlook") },
+};
 
 export class CalendarManager {
     private cachedEvents: CalendarEvent[] = [];
@@ -59,44 +65,20 @@ export class CalendarManager {
     }
 
     private async fetchAll() {
-        logger.info("Syncing all calendars...");
-
-        const events: CalendarEvent[] = [];
-
-        // Sync Discord events
-        if (settings.store.discordEventsEnabled) {
+        const results = await Promise.all(Object.entries(FETCHERS).map(async ([source, { enabled, fetch }]) => {
+            if (!enabled()) return [];
             try {
-                const discordEvents = await fetchDiscordEvents();
-                events.push(...discordEvents);
+                return await fetch();
             } catch (err) {
-                logger.error("Failed to fetch Discord events:", err);
+                // A transient failure should not wipe the calendar: keep what this source returned last time
+                logger.error(`Failed to fetch ${source} events:`, err);
+                return this.cachedEvents.filter(event => event.source === source);
             }
-        }
+        }));
 
-        // Sync Google Calendar
-        if (settings.store.googleCalendarEnabled && settings.store.googleRefreshToken) {
-            try {
-                const googleEvents = await fetchProviderEvents("google");
-                events.push(...googleEvents);
-            } catch (err) {
-                logger.error("Failed to fetch Google events:", err);
-            }
-        }
-
-        // Sync Outlook Calendar
-        if (settings.store.outlookCalendarEnabled && settings.store.outlookRefreshToken) {
-            try {
-                const outlookEvents = await fetchProviderEvents("outlook");
-                events.push(...outlookEvents);
-            } catch (err) {
-                logger.error("Failed to fetch Outlook events:", err);
-            }
-        }
-
-        this.cachedEvents = events.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+        this.cachedEvents = results.flat().sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
         this.lastSync = Date.now();
-
-        logger.info(`Synced ${events.length} events`);
+        logger.info(`Synced ${this.cachedEvents.length} events`);
     }
 
     async getAllEvents(start: Date, end: Date): Promise<CalendarEvent[]> {
