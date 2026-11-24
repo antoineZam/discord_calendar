@@ -32,6 +32,12 @@ export const addDays = (date: Date, days: number) => new Date(date.getFullYear()
 export const startOfWeek = (date: Date) => addDays(date, -date.getDay());
 export const startOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1);
 
+/** Parses a "YYYY-MM-DD" date at local midnight, where `new Date()` would use UTC midnight. */
+export function parseLocalDate(date: string) {
+    const [year, month, day] = date.split("-").map(Number);
+    return new Date(year, month - 1, day);
+}
+
 export const isSameDay = (a: Date, b: Date) =>
     a.getDate() === b.getDate() && a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
 

@@ -6,7 +6,7 @@
 
 import { settings } from "../settings";
 import { CalendarEvent, EventAttendee, EventSource } from "../types";
-import { addDays, MINUTE_MS } from "./date";
+import { addDays, MINUTE_MS, parseLocalDate } from "./date";
 import { SOURCES } from "./sources";
 
 /** External calendars, connected through OAuth. */
@@ -159,16 +159,24 @@ export async function fetchProviderEvents(provider: Provider): Promise<CalendarE
     return parseEvents(await response.json());
 }
 
+/** Timed events have a `dateTime`, all-day events only a `date`. */
+interface GoogleTime {
+    dateTime?: string;
+    date?: string;
+}
+
 interface GoogleEvent {
     id: string;
     summary?: string;
     description?: string;
     location?: string;
-    start: { dateTime?: string; date?: string; };
-    end: { dateTime?: string; date?: string; };
+    start: GoogleTime;
+    end: GoogleTime;
     attendees?: { email: string; displayName?: string; responseStatus?: string; }[];
     organizer?: { email: string; displayName?: string; };
 }
+
+const parseGoogleTime = ({ dateTime, date }: GoogleTime) => dateTime ? new Date(dateTime) : parseLocalDate(date!);
 
 function parseGoogleEvent(event: GoogleEvent): CalendarEvent {
     return {
@@ -177,8 +185,8 @@ function parseGoogleEvent(event: GoogleEvent): CalendarEvent {
         title: event.summary || "(No title)",
         description: event.description,
         location: event.location,
-        startTime: new Date(event.start.dateTime ?? event.start.date!),
-        endTime: new Date(event.end.dateTime ?? event.end.date!),
+        startTime: parseGoogleTime(event.start),
+        endTime: parseGoogleTime(event.end),
         allDay: !event.start.dateTime,
         status: "opted_in",
         attendees: event.attendees?.map(a => ({
