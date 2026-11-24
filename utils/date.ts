@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import { CalendarView } from "../types";
+import { CalendarEvent, CalendarView } from "../types";
 
 export const MINUTE_MS = 60_000;
 export const HOUR_MS = 60 * MINUTE_MS;
@@ -34,6 +34,23 @@ export const startOfMonth = (date: Date) => new Date(date.getFullYear(), date.ge
 
 export const isSameDay = (a: Date, b: Date) =>
     a.getDate() === b.getDate() && a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
+
+/** Identifies the local calendar day of a date, for use as a map key. */
+export const dayKey = (date: Date) => `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+
+export type EventsByDay = Map<string, CalendarEvent[]>;
+
+/** Groups events by the day they start on, keeping their order. */
+export function groupByDay(events: CalendarEvent[]): EventsByDay {
+    const days: EventsByDay = new Map();
+    for (const event of events) {
+        const key = dayKey(event.startTime);
+        const group = days.get(key);
+        if (group) group.push(event);
+        else days.set(key, [event]);
+    }
+    return days;
+}
 
 /** The seven days of the week containing `date`, starting on Sunday. */
 export function getWeekDays(date: Date) {

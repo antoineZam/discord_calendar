@@ -8,7 +8,7 @@ import { classNameFactory } from "@api/Styles";
 import type { ComponentType, ReactNode } from "react";
 
 import { CalendarEvent, CalendarView } from "../types";
-import { addDays, formatLongDate, formatTime, formatTimeRange, getMonthWeeks, getWeekDays, HOUR_LABELS, HOUR_MS, isSameDay, WEEKDAY_NAMES } from "../utils/date";
+import { addDays, dayKey, EventsByDay, formatLongDate, formatTime, formatTimeRange, getMonthWeeks, getWeekDays, groupByDay, HOUR_LABELS, HOUR_MS, isSameDay, WEEKDAY_NAMES } from "../utils/date";
 import { sourceColor } from "../utils/sources";
 import { EventCard } from "./EventCard";
 import { CalendarIcon } from "./Icons";
@@ -20,7 +20,9 @@ const MAX_PILLS_PER_DAY = 3;
 
 interface ViewProps {
     currentDate: Date;
+    /** Sorted by start time. */
     events: CalendarEvent[];
+    eventsByDay: EventsByDay;
     onSelectEvent: (event: CalendarEvent) => void;
 }
 
@@ -36,7 +38,7 @@ export function CalendarGrid({ view, ...props }: ViewProps & { view: CalendarVie
     return <View {...props} />;
 }
 
-function MonthView({ currentDate, events, onSelectEvent }: ViewProps) {
+function MonthView({ currentDate, eventsByDay, onSelectEvent }: ViewProps) {
     const today = new Date();
 
     return (
@@ -51,7 +53,7 @@ function MonthView({ currentDate, events, onSelectEvent }: ViewProps) {
                     <div key={wi} className={cl("month-week")}>
                         {week.map(day => {
                             const isToday = isSameDay(day, today);
-                            const dayEvents = events.filter(e => isSameDay(e.startTime, day));
+                            const dayEvents = eventsByDay.get(dayKey(day)) ?? [];
 
                             return (
                                 <div
@@ -77,7 +79,7 @@ function MonthView({ currentDate, events, onSelectEvent }: ViewProps) {
     );
 }
 
-function WeekView({ currentDate, events, onSelectEvent }: ViewProps) {
+function WeekView({ currentDate, eventsByDay, onSelectEvent }: ViewProps) {
     const days = getWeekDays(currentDate);
     const today = new Date();
 
@@ -98,7 +100,7 @@ function WeekView({ currentDate, events, onSelectEvent }: ViewProps) {
                     {days.map(day => (
                         <div key={day.getDay()} className={cl("week-day-column")}>
                             <HourCells />
-                            {events.filter(e => isSameDay(e.startTime, day)).map(event => (
+                            {eventsByDay.get(dayKey(day))?.map(event => (
                                 <TimedEvent key={event.id} event={event} className="week-event-block" minHeight={24} onClick={() => onSelectEvent(event)}>
                                     <span className={cl("event-block-time")}>{formatTime(event.startTime)}</span>
                                     <span className={cl("event-block-title")}>{event.title}</span>
@@ -112,7 +114,7 @@ function WeekView({ currentDate, events, onSelectEvent }: ViewProps) {
     );
 }
 
-function DayView({ currentDate, events, onSelectEvent }: ViewProps) {
+function DayView({ currentDate, eventsByDay, onSelectEvent }: ViewProps) {
     const isToday = isSameDay(currentDate, new Date());
 
     return (
@@ -125,7 +127,7 @@ function DayView({ currentDate, events, onSelectEvent }: ViewProps) {
                 <TimeColumn />
                 <div className={cl("day-events-column")}>
                     <HourCells />
-                    {events.filter(e => isSameDay(e.startTime, currentDate)).map(event => (
+                    {eventsByDay.get(dayKey(currentDate))?.map(event => (
                         <TimedEvent key={event.id} event={event} className="day-event-block" minHeight={32} onClick={() => onSelectEvent(event)}>
                             <div className={cl("event-block-content")}>
                                 <span className={cl("event-block-title")}>{event.title}</span>
@@ -141,11 +143,9 @@ function DayView({ currentDate, events, onSelectEvent }: ViewProps) {
 }
 
 function AgendaView({ currentDate, events, onSelectEvent }: ViewProps) {
-    const upcoming = events
-        .filter(e => e.startTime >= currentDate)
-        .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+    const days = groupByDay(events.filter(e => e.startTime >= currentDate));
 
-    if (!upcoming.length) {
+    if (!days.size) {
         return (
             <div className={cl("agenda-view")}>
                 <div className={cl("no-events")}>
@@ -154,14 +154,6 @@ function AgendaView({ currentDate, events, onSelectEvent }: ViewProps) {
                 </div>
             </div>
         );
-    }
-
-    const days = new Map<string, CalendarEvent[]>();
-    for (const event of upcoming) {
-        const key = event.startTime.toDateString();
-        const group = days.get(key);
-        if (group) group.push(event);
-        else days.set(key, [event]);
     }
 
     const today = new Date();

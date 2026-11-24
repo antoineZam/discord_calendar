@@ -11,7 +11,7 @@ import { React, useEffect, useMemo, useState } from "@webpack/common";
 import { settings } from "../settings";
 import { CalendarEvent, CalendarView, CalendarViewState, EventFilters, EventSource } from "../types";
 import { calendarManager } from "../utils/CalendarManager";
-import { addDays, formatFullDate, formatMediumDate, formatMonthYear, getMonthWeeks, isSameDay, shiftDate, startOfMonth, startOfWeek, WEEKDAY_NAMES } from "../utils/date";
+import { addDays, dayKey, EventsByDay, formatFullDate, formatMediumDate, formatMonthYear, getMonthWeeks, groupByDay, isSameDay, shiftDate, startOfMonth, startOfWeek, WEEKDAY_NAMES } from "../utils/date";
 import { logger } from "../utils/logger";
 import { SOURCE_KEYS } from "../utils/sources";
 import { CalendarFilters } from "./CalendarFilters";
@@ -79,6 +79,8 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
         () => events.filter(event => filters.sources[event.source] && (event.status !== "pending" || filters.showPending)),
         [events, filters]
     );
+
+    const eventsByDay = useMemo(() => groupByDay(filteredEvents), [filteredEvents]);
 
     const eventCounts = useMemo(() => {
         const counts = Object.fromEntries(SOURCE_KEYS.map(source => [source, 0])) as Record<EventSource, number>;
@@ -206,7 +208,7 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
                         <MiniCalendar
                             currentDate={viewState.currentDate}
                             onDateSelect={date => setViewState(prev => ({ ...prev, currentDate: date }))}
-                            events={filteredEvents}
+                            eventsByDay={eventsByDay}
                         />
                     </div>
 
@@ -241,6 +243,7 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
                             view={viewState.view}
                             currentDate={viewState.currentDate}
                             events={filteredEvents}
+                            eventsByDay={eventsByDay}
                             onSelectEvent={selectEvent}
                         />
                     )}
@@ -260,14 +263,10 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
 }
 
 // Mini calendar component for sidebar
-function MiniCalendar({
-    currentDate,
-    onDateSelect,
-    events
-}: {
+function MiniCalendar({ currentDate, onDateSelect, eventsByDay }: {
     currentDate: Date;
     onDateSelect: (date: Date) => void;
-    events: CalendarEvent[];
+    eventsByDay: EventsByDay;
 }) {
     const weeks = getMonthWeeks(currentDate);
     const today = new Date();
@@ -285,7 +284,7 @@ function MiniCalendar({
                         const isCurrentMonth = day.getMonth() === currentDate.getMonth();
                         const isToday = isSameDay(day, today);
                         const isSelected = isSameDay(day, currentDate);
-                        const hasEvents = events.some(e => isSameDay(e.startTime, day));
+                        const hasEvents = eventsByDay.has(dayKey(day));
 
                         return (
                             <button
@@ -318,11 +317,8 @@ function formatViewTitle(date: Date, view: CalendarView) {
     }
 }
 
-function getUpcomingEvents(events: CalendarEvent[], limit: number): CalendarEvent[] {
+function getUpcomingEvents(events: CalendarEvent[], limit: number) {
     const now = new Date();
-    return events
-        .filter(e => e.startTime >= now)
-        .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
-        .slice(0, limit);
+    return events.filter(e => e.startTime >= now).slice(0, limit);
 }
 

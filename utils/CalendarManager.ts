@@ -82,7 +82,7 @@ export class CalendarManager {
             }
         }
 
-        this.cachedEvents = events;
+        this.cachedEvents = events.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
         this.lastSync = new Date();
 
         logger.info(`Synced ${events.length} events`);
