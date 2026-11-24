@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import { findByProps } from "@webpack";
 import { GuildScheduledEventStore, GuildStore, RestAPI } from "@webpack/common";
 import { 
     CalendarEvent, 
@@ -13,15 +12,6 @@ import {
     OutlookCalendarEvent,
     DiscordEventEntityType
 } from "../types";
-
-// Try to get actions module - may not be available immediately
-function getGuildScheduledEventActions() {
-    try {
-        return findByProps("fetchGuildScheduledEvents");
-    } catch {
-        return null;
-    }
-}
 
 interface Settings {
     store: {
@@ -153,47 +143,34 @@ export class CalendarManager {
         
         console.log(`[CalendarSync] Fetching events from ${guilds.length} guilds...`);
         
-        // Try to get the actions module (may not be available)
-        const actions = getGuildScheduledEventActions();
-        
         for (const guild of guilds) {
             try {
-                // Try to fetch events for this guild via API (if available)
-                if (actions && typeof actions.fetchGuildScheduledEvents === "function") {
-                    try {
-                        await actions.fetchGuildScheduledEvents(guild.id);
-                    } catch {
-                        // Silently continue - events might already be cached
-                    }
-                }
-                
-                // Get events from store - try multiple methods
-                let guildEvents: any = null;
+                // Fetch events directly via REST API
+                let guildEvents: any = {};
                 
                 try {
-                    if (typeof GuildScheduledEventStore.getGuildScheduledEventsForGuild === "function") {
-                        guildEvents = GuildScheduledEventStore.getGuildScheduledEventsForGuild(guild.id);
+                    const response = await RestAPI.get({
+                        url: `/guilds/${guild.id}/scheduled-events`,
+                        query: { with_user_count: true }
+                    });
+                    
+                    if (response?.body && Array.isArray(response.body)) {
+                        for (const event of response.body) {
+                            guildEvents[event.id] = event;
+                        }
                     }
-                } catch {
-                    // Try alternative method
-                }
-                
-                if (!guildEvents) {
+                } catch (apiErr) {
+                    // Fallback to store if API fails
+                    console.log(`[CalendarSync] API fetch failed for ${guild.name}, trying store...`);
+                    
                     try {
-                        // Try getting all events and filtering
-                        const allEvents = (GuildScheduledEventStore as any).getGuildScheduledEvents?.() || {};
-                        guildEvents = {};
-                        for (const [id, event] of Object.entries(allEvents)) {
-                            if ((event as any)?.guild_id === guild.id) {
-                                guildEvents[id] = event;
-                            }
+                        if (GuildScheduledEventStore && typeof GuildScheduledEventStore.getGuildScheduledEventsForGuild === "function") {
+                            guildEvents = GuildScheduledEventStore.getGuildScheduledEventsForGuild(guild.id) || {};
                         }
                     } catch {
                         guildEvents = {};
                     }
                 }
-                
-                if (!guildEvents) guildEvents = {};
                 
                 const eventValues = Object.values(guildEvents) as DiscordGuildEvent[];
                 
