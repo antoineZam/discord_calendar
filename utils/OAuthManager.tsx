@@ -15,17 +15,17 @@ declare const VencordNative: {
     };
 };
 
+// Hardcoded OAuth Client IDs - no user configuration needed
+export const GOOGLE_CLIENT_ID = "634850353269-g82ekhtmoilfpdjbcvedpb0i8ntc7d3c.apps.googleusercontent.com";
+export const GOOGLE_REDIRECT_URI = "https://antoinezam.github.io/discord_calendar";
+
 interface Settings {
     store: {
-        googleClientId: string;
         googleRefreshToken: string;
         outlookClientId: string;
         outlookRefreshToken: string;
     };
 }
-
-// We'll use the "out-of-band" (OOB) or manual copy-paste flow since we can't run a local server
-// Users will copy the authorization code from the browser
 
 export class OAuthManager {
     private settings: Settings;
@@ -36,17 +36,12 @@ export class OAuthManager {
 
     // Google OAuth - Opens modal for user to paste auth code
     async authenticateGoogle(): Promise<void> {
-        const clientId = this.settings.store.googleClientId;
-        if (!clientId) {
-            throw new Error("Google Client ID not configured");
-        }
-
         return new Promise((resolve, reject) => {
             openModal(props => (
                 <OAuthModal
                     {...props}
                     provider="google"
-                    clientId={clientId}
+                    clientId={GOOGLE_CLIENT_ID}
                     onSuccess={(refreshToken) => {
                         this.settings.store.googleRefreshToken = refreshToken;
                         showNotification({
@@ -119,8 +114,7 @@ function OAuthModal({ onClose, provider, clientId, onSuccess, onError }: OAuthMo
             authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
             tokenUrl: "https://oauth2.googleapis.com/token",
             scope: "https://www.googleapis.com/auth/calendar.readonly",
-            // For desktop apps without a redirect, use OOB or localhost
-            redirectUri: "urn:ietf:wg:oauth:2.0:oob",
+            redirectUri: GOOGLE_REDIRECT_URI,
         },
         outlook: {
             name: "Outlook Calendar",

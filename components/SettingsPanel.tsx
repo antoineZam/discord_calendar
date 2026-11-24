@@ -83,17 +83,12 @@ export function SettingsPanel() {
                         <button 
                             className={cl("connection-btn", googleAuthStatus === "connected" ? "disconnect" : "connect")}
                             onClick={handleGoogleAuth}
-                            disabled={googleAuthStatus === "connecting" || !settings.store.googleClientId}
+                            disabled={googleAuthStatus === "connecting"}
                         >
                             {googleAuthStatus === "connected" ? "Disconnect" : 
                              googleAuthStatus === "connecting" ? "..." : "Connect"}
                         </button>
                     </div>
-                    {!settings.store.googleClientId && (
-                        <p className={cl("connection-warning")}>
-                            Please enter your Google OAuth Client ID above to connect.
-                        </p>
-                    )}
                 </div>
 
                 {/* Outlook Calendar Connection */}
@@ -134,16 +129,8 @@ export function SettingsPanel() {
                 
                 <div className={cl("instructions")}>
                     <div className={cl("instruction-card")}>
-                        <h4>Google Calendar Setup</h4>
-                        <ol>
-                            <li>Go to <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a></li>
-                            <li>Create a new project or select an existing one</li>
-                            <li>Enable the Google Calendar API</li>
-                            <li>Go to Credentials → Create Credentials → OAuth Client ID</li>
-                            <li>Application type: Web application</li>
-                            <li>Add redirect URI: <code>http://localhost:38420/callback</code></li>
-                            <li>Copy the Client ID and paste it in the settings above</li>
-                        </ol>
+                        <h4>Google Calendar</h4>
+                        <p>Click "Connect" above to sign in with your Google account. Your calendar events will be synced automatically.</p>
                     </div>
 
                     <div className={cl("instruction-card")}>

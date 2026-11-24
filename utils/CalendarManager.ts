@@ -12,11 +12,11 @@ import {
     OutlookCalendarEvent,
     DiscordEventEntityType
 } from "../types";
+import { GOOGLE_CLIENT_ID } from "./OAuthManager";
 
 interface Settings {
     store: {
         googleCalendarEnabled: boolean;
-        googleClientId: string;
         googleRefreshToken: string;
         outlookCalendarEnabled: boolean;
         outlookClientId: string;
@@ -382,7 +382,7 @@ export class CalendarManager {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: new URLSearchParams({
-                    client_id: this.settings.store.googleClientId,
+                    client_id: GOOGLE_CLIENT_ID,
                     refresh_token: refreshToken,
                     grant_type: "refresh_token",
                 }),

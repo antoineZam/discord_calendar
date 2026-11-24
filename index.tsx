@@ -27,11 +27,6 @@ export const settings = definePluginSettings({
         description: "Enable Google Calendar sync",
         default: false,
     },
-    googleClientId: {
-        type: OptionType.STRING,
-        description: "Google OAuth Client ID",
-        default: "",
-    },
     googleRefreshToken: {
         type: OptionType.STRING,
         description: "Google OAuth Refresh Token (auto-filled after auth)",
