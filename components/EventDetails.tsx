@@ -19,8 +19,7 @@ const cl = classNameFactory("calendar-sync-");
 interface EventDetailsProps {
     event: CalendarEvent;
     onClose: () => void;
-    onOptIn: (event: CalendarEvent) => void;
-    onOptOut: (event: CalendarEvent) => void;
+    onInterestChange: (interested: boolean) => void;
 }
 
 const ENTITY_TYPES: Record<GuildScheduledEventEntityType, { label: string; Icon: ComponentType<IconProps>; }> = {
@@ -29,7 +28,7 @@ const ENTITY_TYPES: Record<GuildScheduledEventEntityType, { label: string; Icon:
     [GuildScheduledEventEntityType.EXTERNAL]: { label: "External Event", Icon: CalendarIcon },
 };
 
-export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetailsProps) {
+export function EventDetails({ event, onClose, onInterestChange }: EventDetailsProps) {
     const entityType = event.entityType && ENTITY_TYPES[event.entityType];
 
     return (
@@ -217,7 +216,7 @@ export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetails
                         {event.status === "opted_in" ? (
                             <button
                                 className={cl("action-btn", "secondary")}
-                                onClick={() => onOptOut(event)}
+                                onClick={() => onInterestChange(false)}
                             >
                                 <CloseIcon />
                                 Not Interested
@@ -225,7 +224,7 @@ export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetails
                         ) : (
                             <button
                                 className={cl("action-btn", "primary")}
-                                onClick={() => onOptIn(event)}
+                                onClick={() => onInterestChange(true)}
                             >
                                 <CheckIcon />
                                 I'm Interested

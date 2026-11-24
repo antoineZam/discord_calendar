@@ -103,62 +103,24 @@ export class CalendarManager {
         logger.info(`Synced ${this.events.length} events`);
     }
 
-    // Opt-in management
-    setOptedInEvents(events: string[]) {
-        settings.store.optedInEvents = JSON.stringify(events);
-    }
+    /** Marks a Discord event as interesting or not, then updates it in place instead of resyncing every guild. */
+    async setInterest(event: CalendarEvent, interested: boolean) {
+        if (event.source !== "discord" || !event.guildId) throw new Error("Only Discord events can be joined");
 
-    async optInToEvent(eventId: string, guildId: string) {
-        logger.debug(`Opting into event ${eventId} in guild ${guildId}`);
+        const url = `/guilds/${event.guildId}/scheduled-events/${event.id}/users/@me`;
+        await (interested ? RestAPI.put({ url }) : RestAPI.del({ url }));
 
-        try {
-            // Use Vencord's RestAPI which handles authentication automatically
-            await RestAPI.put({
-                url: `/guilds/${guildId}/scheduled-events/${eventId}/users/@me`,
-            });
+        const optedIn = new Set(getOptedInEvents());
+        if (interested) optedIn.add(event.id);
+        else optedIn.delete(event.id);
+        settings.store.optedInEvents = JSON.stringify([...optedIn]);
 
-            logger.debug(`Successfully opted into event ${eventId}`);
-
-            // Update local state
-            const optedIn = getOptedInEvents();
-            if (!optedIn.includes(eventId)) {
-                optedIn.push(eventId);
-                this.setOptedInEvents(optedIn);
-            }
-
-            // Refresh events
-            await this.sync();
-        } catch (err: any) {
-            logger.error("Opt-in failed:", err);
-            throw new Error(`Failed to opt in: ${err.message || err}`);
-        }
-    }
-
-    async optOutOfEvent(eventId: string, guildId: string) {
-        logger.debug(`Opting out of event ${eventId} in guild ${guildId}`);
-
-        try {
-            // Use Vencord's RestAPI which handles authentication automatically
-            await RestAPI.del({
-                url: `/guilds/${guildId}/scheduled-events/${eventId}/users/@me`,
-            });
-
-            logger.debug(`Successfully opted out of event ${eventId}`);
-
-            // Update local state
-            const optedIn = getOptedInEvents();
-            const index = optedIn.indexOf(eventId);
-            if (index !== -1) {
-                optedIn.splice(index, 1);
-                this.setOptedInEvents(optedIn);
-            }
-
-            // Refresh events
-            await this.sync();
-        } catch (err: any) {
-            logger.error("Opt-out failed:", err);
-            throw new Error(`Failed to opt out: ${err.message || err}`);
-        }
+        const delta = interested ? 1 : -1;
+        this.setEvents(this.events.map(e => e.id !== event.id ? e : {
+            ...e,
+            status: interested ? "opted_in" : "pending",
+            interestedCount: e.interestedCount === undefined ? undefined : e.interestedCount + delta,
+        }));
     }
 }
 

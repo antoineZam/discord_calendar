@@ -71,25 +71,12 @@ function CalendarModalContent({ onClose }: { onClose: () => void; }) {
     const selectedEvent = events.find(event => event.id === selectedId);
     const selectEvent = (event: CalendarEvent | null) => setSelectedId(event?.id ?? null);
 
-    async function handleOptIn(event: CalendarEvent) {
-        if (event.source !== "discord" || !event.guildId) return;
-
+    async function changeInterest(event: CalendarEvent, interested: boolean) {
         try {
-            await calendarManager.optInToEvent(event.id, event.guildId);
+            await calendarManager.setInterest(event, interested);
         } catch (err) {
-            logger.error("Failed to opt into event:", err);
-            setError(`Failed to opt in: ${(err as Error).message}`);
-        }
-    }
-
-    async function handleOptOut(event: CalendarEvent) {
-        if (event.source !== "discord" || !event.guildId) return;
-
-        try {
-            await calendarManager.optOutOfEvent(event.id, event.guildId);
-        } catch (err) {
-            logger.error("Failed to opt out of event:", err);
-            setError(`Failed to opt out: ${(err as Error).message}`);
+            logger.error("Failed to update event interest:", err);
+            setError(`Failed to update your interest: ${err instanceof Error ? err.message : err}`);
         }
     }
 
@@ -187,8 +174,7 @@ function CalendarModalContent({ onClose }: { onClose: () => void; }) {
                     <EventDetails
                         event={selectedEvent}
                         onClose={() => selectEvent(null)}
-                        onOptIn={handleOptIn}
-                        onOptOut={handleOptOut}
+                        onInterestChange={interested => changeInterest(selectedEvent, interested)}
                     />
                 )}
             </ModalContent>
