@@ -8,7 +8,7 @@ import type { GuildScheduledEventEntityType } from "@vencord/discord-types/enums
 
 export type EventSource = "discord" | "google" | "outlook";
 
-export type EventStatus = "opted_in" | "pending" | "declined";
+export type EventStatus = "opted_in" | "pending";
 
 export interface CalendarEvent {
     id: string;
