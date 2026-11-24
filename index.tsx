@@ -13,6 +13,7 @@ import { findComponentByCodeLazy } from "@webpack";
 import type { PropsWithChildren } from "react";
 
 import { openCalendarModal } from "./components/CalendarModal";
+import { SettingsPanel } from "./components/SettingsPanel";
 import { settings } from "./settings";
 import { calendarManager } from "./utils/CalendarManager";
 
@@ -49,6 +50,7 @@ export default definePlugin({
     authors: [Devs.Ven], // Replace with your dev info
 
     settings,
+    settingsAboutComponent: SettingsPanel,
 
     // This adds the action to the Vencord toolbox menu
     toolboxActions: {

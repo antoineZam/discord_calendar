@@ -120,7 +120,7 @@ export function SettingsPanel() {
                     </div>
                     {!settings.store.outlookClientId && (
                         <p className={cl("connection-warning")}>
-                            Please enter your Outlook/Azure OAuth Client ID above to connect.
+                            Enter your Outlook/Azure OAuth Client ID in the settings below to connect.
                         </p>
                     )}
                 </div>
