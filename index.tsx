@@ -40,7 +40,7 @@ export const settings = definePluginSettings({
     },
     outlookClientId: {
         type: OptionType.STRING,
-        description: "Outlook/Azure OAuth Client ID",
+        description: "Outlook/Azure OAuth Client ID (required for Outlook)",
         default: "",
     },
     outlookRefreshToken: {

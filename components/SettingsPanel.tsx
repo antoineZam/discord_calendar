@@ -135,13 +135,14 @@ export function SettingsPanel() {
 
                     <div className={cl("instruction-card")}>
                         <h4>Outlook Calendar Setup</h4>
+                        <p>Outlook requires an Azure App registration:</p>
                         <ol>
                             <li>Go to <a href="https://portal.azure.com/" target="_blank">Azure Portal</a></li>
                             <li>Navigate to Azure Active Directory → App registrations</li>
                             <li>Click "New registration"</li>
-                            <li>Add redirect URI: <code>http://localhost:38420/callback</code></li>
+                            <li>Add redirect URI: <code>https://login.microsoftonline.com/common/oauth2/nativeclient</code></li>
                             <li>Under API permissions, add <code>Calendars.Read</code></li>
-                            <li>Copy the Application (client) ID and paste it in the settings above</li>
+                            <li>Copy the Application (client) ID to the plugin settings</li>
                         </ol>
                     </div>
                 </div>
