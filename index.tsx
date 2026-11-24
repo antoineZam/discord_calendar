@@ -73,10 +73,10 @@ export default definePlugin({
     },
 
     start() {
-        calendarManager.startSync();
+        calendarManager.start();
     },
 
     stop() {
-        calendarManager.stopSync();
+        calendarManager.stop();
     },
 });

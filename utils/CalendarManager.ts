@@ -8,38 +8,38 @@ import { GuildScheduledEventStore, GuildStore, RestAPI } from "@webpack/common";
 
 import { settings } from "../settings";
 import { CalendarEvent, DiscordGuildEvent } from "../types";
+import { MINUTE_MS } from "./date";
 import { logger } from "./logger";
 import { fetchProviderEvents } from "./providers";
 
+/** Leaves Discord time to populate its stores before the first sync. */
+const STARTUP_DELAY_MS = 3000;
+
 export class CalendarManager {
-    private syncInterval: NodeJS.Timeout | null = null;
     private cachedEvents: CalendarEvent[] = [];
     private lastSync: Date | null = null;
+    private timer?: ReturnType<typeof setTimeout>;
+    private running = false;
 
-
-    startSync() {
-        // Delay initial sync to allow Discord stores to load
-        logger.info("Waiting for Discord to fully load...");
-        setTimeout(() => {
-            logger.info("Starting initial sync...");
-            this.syncAllCalendars();
-
-            // Set up interval
-            const intervalMs = settings.store.syncIntervalMinutes * 60 * 1000;
-            this.syncInterval = setInterval(() => {
-                this.syncAllCalendars();
-            }, intervalMs);
-
-            logger.info(`Started sync with ${settings.store.syncIntervalMinutes}min interval`);
-        }, 3000); // Wait 3 seconds for Discord to load
+    start() {
+        this.stop();
+        this.running = true;
+        this.scheduleSync(STARTUP_DELAY_MS);
     }
 
-    stopSync() {
-        if (this.syncInterval) {
-            clearInterval(this.syncInterval);
-            this.syncInterval = null;
-        }
-        logger.info("Stopped sync");
+    stop() {
+        this.running = false;
+        clearTimeout(this.timer);
+        this.timer = undefined;
+    }
+
+    /** Re-arms itself after each sync, so a new interval applies without restarting and syncs never overlap. */
+    private scheduleSync(delayMs: number) {
+        this.timer = setTimeout(async () => {
+            this.timer = undefined;
+            await this.syncAllCalendars();
+            if (this.running && !this.timer) this.scheduleSync(settings.store.syncIntervalMinutes * MINUTE_MS);
+        }, delayMs);
     }
 
     async syncAllCalendars() {
