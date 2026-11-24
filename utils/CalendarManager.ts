@@ -158,7 +158,6 @@ export const calendarManager = new CalendarManager();
 type DiscordGuildEvent = GuildScheduledEvent & {
     creator?: { id: string; username: string; avatar?: string | null; };
     user_count?: number;
-    user_rsvp?: { interested: boolean; };
 };
 
 type GuildInfo = Pick<CalendarEvent, "guildId" | "guildName" | "guildIcon">;
@@ -221,7 +220,8 @@ function toCalendarEvent(raw: DiscordGuildEvent, guild: GuildInfo, optedIn: Set<
         location: raw.entity_metadata?.location,
         startTime,
         endTime: raw.scheduled_end_time ? new Date(raw.scheduled_end_time) : new Date(startTime.getTime() + HOUR_MS),
-        status: optedIn.has(raw.id) || raw.user_rsvp?.interested ? "opted_in" : "pending",
+        // The local list covers guilds whose RSVPs Discord has not loaded yet
+        status: optedIn.has(raw.id) || GuildScheduledEventStore.isInterestedInEventRecurrence(raw.id, null) ? "opted_in" : "pending",
         creatorName: raw.creator?.username,
         creatorAvatar: cdnImage("avatars", raw.creator?.id, raw.creator?.avatar),
         interestedCount: raw.user_count,
