@@ -211,6 +211,16 @@ interface OutlookEvent {
     organizer?: { emailAddress: { name?: string; address: string; }; };
 }
 
+/** Microsoft Graph response types, mapped onto the statuses Google uses. */
+const OUTLOOK_RESPONSES: Record<string, EventAttendee["responseStatus"]> = {
+    organizer: "accepted",
+    accepted: "accepted",
+    tentativelyAccepted: "tentative",
+    declined: "declined",
+    notResponded: "needsAction",
+    none: "needsAction",
+};
+
 function parseOutlookEvent(event: OutlookEvent): CalendarEvent {
     return {
         id: `outlook-${event.id}`,
@@ -225,7 +235,7 @@ function parseOutlookEvent(event: OutlookEvent): CalendarEvent {
         attendees: event.attendees?.map(a => ({
             name: a.emailAddress.name,
             email: a.emailAddress.address,
-            responseStatus: a.status.response as EventAttendee["responseStatus"],
+            responseStatus: OUTLOOK_RESPONSES[a.status.response ?? "none"],
         })),
         organizer: event.organizer && { name: event.organizer.emailAddress.name, email: event.organizer.emailAddress.address },
     };
