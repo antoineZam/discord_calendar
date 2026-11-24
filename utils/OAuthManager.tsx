@@ -5,7 +5,7 @@
  */
 
 import { showNotification } from "@api/Notifications";
-import { openModal, ModalRoot, ModalHeader, ModalContent, ModalCloseButton, ModalSize } from "@utils/modal";
+import { ModalCloseButton, ModalContent, ModalHeader, ModalRoot, ModalSize,openModal } from "@utils/modal";
 import { Button, Forms, React, TextInput, useState } from "@webpack/common";
 
 // Use VencordNative for opening external URLs
@@ -42,7 +42,7 @@ export class OAuthManager {
                     {...props}
                     provider="google"
                     clientId={GOOGLE_CLIENT_ID}
-                    onSuccess={(refreshToken) => {
+                    onSuccess={refreshToken => {
                         this.settings.store.googleRefreshToken = refreshToken;
                         showNotification({
                             title: "CalendarSync",
@@ -70,7 +70,7 @@ export class OAuthManager {
                     {...props}
                     provider="outlook"
                     clientId={clientId}
-                    onSuccess={(refreshToken) => {
+                    onSuccess={refreshToken => {
                         this.settings.store.outlookRefreshToken = refreshToken;
                         showNotification({
                             title: "CalendarSync",
@@ -268,7 +268,7 @@ function OAuthModal({ onClose, provider, clientId, onSuccess, onError }: OAuthMo
                             animation: "spin 0.8s linear infinite"
                         }} />
                         <Forms.FormText>Connecting...</Forms.FormText>
-                        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                        <style>{"@keyframes spin { to { transform: rotate(360deg); } }"}</style>
                     </div>
                 )}
 

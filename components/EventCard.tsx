@@ -6,6 +6,7 @@
 
 import { classNameFactory } from "@api/Styles";
 import { React } from "@webpack/common";
+
 import { CalendarEvent } from "../types";
 
 const cl = classNameFactory("calendar-sync-");
@@ -19,7 +20,7 @@ interface EventCardProps {
 export function EventCard({ event, compact = false, onClick }: EventCardProps) {
     const startTime = new Date(event.startTime);
     const endTime = new Date(event.endTime);
-    
+
     const sourceIcons = {
         discord: (
             <svg viewBox="0 0 24 24" width="14" height="14">
@@ -41,13 +42,13 @@ export function EventCard({ event, compact = false, onClick }: EventCardProps) {
             </svg>
         ),
     };
-    
+
     const sourceColors = {
         discord: "var(--brand-experiment)",
         google: "#4285F4",
         outlook: "#0078D4",
     };
-    
+
     if (compact) {
         return (
             <button
@@ -68,7 +69,7 @@ export function EventCard({ event, compact = false, onClick }: EventCardProps) {
             </button>
         );
     }
-    
+
     return (
         <button
             className={cl("event-card", event.status === "pending" && "pending")}
@@ -87,21 +88,21 @@ export function EventCard({ event, compact = false, onClick }: EventCardProps) {
                     )}
                 </div>
             </div>
-            
+
             {event.coverImage && (
                 <div className={cl("event-card-cover")}>
-                    <img 
-                        src={event.coverImage} 
+                    <img
+                        src={event.coverImage}
                         alt={event.title}
                         loading="lazy"
                         decoding="async"
                     />
                 </div>
             )}
-            
+
             <div className={cl("event-card-body")}>
                 <h4 className={cl("event-card-title")}>{event.title}</h4>
-                
+
                 <div className={cl("event-card-info")}>
                     <div className={cl("event-card-row")}>
                         <svg viewBox="0 0 24 24" width="14" height="14">
@@ -109,7 +110,7 @@ export function EventCard({ event, compact = false, onClick }: EventCardProps) {
                         </svg>
                         <span>{formatEventTime(startTime, endTime, event.allDay)}</span>
                     </div>
-                    
+
                     {event.location && (
                         <div className={cl("event-card-row")}>
                             <svg viewBox="0 0 24 24" width="14" height="14">
@@ -118,7 +119,7 @@ export function EventCard({ event, compact = false, onClick }: EventCardProps) {
                             <span>{event.location}</span>
                         </div>
                     )}
-                    
+
                     {event.guildName && (
                         <div className={cl("event-card-row")}>
                             <svg viewBox="0 0 24 24" width="14" height="14">
@@ -127,7 +128,7 @@ export function EventCard({ event, compact = false, onClick }: EventCardProps) {
                             <span>{event.guildName}</span>
                         </div>
                     )}
-                    
+
                     {event.interestedCount !== undefined && (
                         <div className={cl("event-card-row")}>
                             <svg viewBox="0 0 24 24" width="14" height="14">
@@ -137,7 +138,7 @@ export function EventCard({ event, compact = false, onClick }: EventCardProps) {
                         </div>
                     )}
                 </div>
-                
+
                 {event.description && (
                     <p className={cl("event-card-description")}>
                         {truncateText(event.description, 150)}
@@ -152,15 +153,15 @@ function formatEventTime(start: Date, end: Date, allDay?: boolean): string {
     if (allDay) {
         return "All day";
     }
-    
+
     const sameDay = start.toDateString() === end.toDateString();
     const timeOptions: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit" };
     const dateOptions: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
-    
+
     if (sameDay) {
         return `${start.toLocaleDateString(undefined, dateOptions)} · ${start.toLocaleTimeString(undefined, timeOptions)} - ${end.toLocaleTimeString(undefined, timeOptions)}`;
     }
-    
+
     return `${start.toLocaleDateString(undefined, dateOptions)} ${start.toLocaleTimeString(undefined, timeOptions)} - ${end.toLocaleDateString(undefined, dateOptions)} ${end.toLocaleTimeString(undefined, timeOptions)}`;
 }
 

@@ -6,6 +6,7 @@
 
 import { classNameFactory } from "@api/Styles";
 import { React } from "@webpack/common";
+
 import { CalendarViewState } from "../types";
 
 const cl = classNameFactory("calendar-sync-");
@@ -24,7 +25,7 @@ export function CalendarFilters({ filters, onUpdateFilter, eventCounts }: Calend
     return (
         <div className={cl("filters")}>
             <h3 className={cl("section-title")}>Calendars</h3>
-            
+
             <div className={cl("filter-list")}>
                 {/* Discord Events */}
                 <label className={cl("filter-item")}>
@@ -34,8 +35,8 @@ export function CalendarFilters({ filters, onUpdateFilter, eventCounts }: Calend
                         onChange={e => onUpdateFilter("showDiscord", e.target.checked)}
                         className={cl("filter-checkbox")}
                     />
-                    <span 
-                        className={cl("filter-color")} 
+                    <span
+                        className={cl("filter-color")}
                         style={{ "--filter-color": "var(--brand-experiment)" } as React.CSSProperties}
                     />
                     <span className={cl("filter-label")}>
@@ -44,7 +45,7 @@ export function CalendarFilters({ filters, onUpdateFilter, eventCounts }: Calend
                     </span>
                     <DiscordIcon />
                 </label>
-                
+
                 {/* Google Calendar */}
                 <label className={cl("filter-item")}>
                     <input
@@ -53,8 +54,8 @@ export function CalendarFilters({ filters, onUpdateFilter, eventCounts }: Calend
                         onChange={e => onUpdateFilter("showGoogle", e.target.checked)}
                         className={cl("filter-checkbox")}
                     />
-                    <span 
-                        className={cl("filter-color")} 
+                    <span
+                        className={cl("filter-color")}
                         style={{ "--filter-color": "#4285F4" } as React.CSSProperties}
                     />
                     <span className={cl("filter-label")}>
@@ -63,7 +64,7 @@ export function CalendarFilters({ filters, onUpdateFilter, eventCounts }: Calend
                     </span>
                     <GoogleIcon />
                 </label>
-                
+
                 {/* Outlook Calendar */}
                 <label className={cl("filter-item")}>
                     <input
@@ -72,8 +73,8 @@ export function CalendarFilters({ filters, onUpdateFilter, eventCounts }: Calend
                         onChange={e => onUpdateFilter("showOutlook", e.target.checked)}
                         className={cl("filter-checkbox")}
                     />
-                    <span 
-                        className={cl("filter-color")} 
+                    <span
+                        className={cl("filter-color")}
                         style={{ "--filter-color": "#0078D4" } as React.CSSProperties}
                     />
                     <span className={cl("filter-label")}>
@@ -83,11 +84,11 @@ export function CalendarFilters({ filters, onUpdateFilter, eventCounts }: Calend
                     <OutlookIcon />
                 </label>
             </div>
-            
+
             <div className={cl("filter-divider")} />
-            
+
             <h3 className={cl("section-title")}>Display Options</h3>
-            
+
             <div className={cl("filter-list")}>
                 {/* Show Pending Events */}
                 <label className={cl("filter-item", "toggle")}>

@@ -11,7 +11,6 @@ import ErrorBoundary from "@components/ErrorBoundary";
 import { Devs } from "@utils/constants";
 import definePlugin, { OptionType } from "@utils/types";
 import { findComponentByCodeLazy } from "@webpack";
-import { Tooltip } from "@webpack/common";
 import type { PropsWithChildren } from "react";
 
 import { openCalendarModal } from "./components/CalendarModal";

@@ -5,14 +5,14 @@
  */
 
 import { classNameFactory } from "@api/Styles";
-import { ModalCloseButton, ModalContent, ModalHeader, ModalProps, ModalRoot, ModalSize, openModal } from "@utils/modal";
+import { ModalCloseButton, ModalContent, ModalHeader, ModalRoot, ModalSize, openModal } from "@utils/modal";
 import { React, useEffect, useMemo, useState } from "@webpack/common";
+
+import { calendarManager, settings } from "../index";
 import { CalendarEvent, CalendarViewState } from "../types";
-import { calendarManager } from "../index";
-import { settings } from "../index";
+import { CalendarFilters } from "./CalendarFilters";
 import { CalendarGrid } from "./CalendarGrid";
 import { EventCard } from "./EventCard";
-import { CalendarFilters } from "./CalendarFilters";
 import { EventDetails } from "./EventDetails";
 
 const cl = classNameFactory("calendar-sync-");
@@ -54,7 +54,7 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
     async function fetchEvents() {
         setIsLoading(true);
         setError(null);
-        
+
         try {
             const allEvents = await calendarManager.getAllEvents(
                 getMonthStart(viewState.currentDate),
@@ -76,10 +76,10 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
             if (event.source === "discord" && !viewState.filters.showDiscord) return false;
             if (event.source === "google" && !viewState.filters.showGoogle) return false;
             if (event.source === "outlook" && !viewState.filters.showOutlook) return false;
-            
+
             // Filter pending events
             if (event.status === "pending" && !viewState.filters.showPending) return false;
-            
+
             return true;
         });
     }, [events, viewState.filters]);
@@ -127,7 +127,7 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
             console.error("[CalendarSync] Event missing guildId:", event);
             return;
         }
-        
+
         setIsLoading(true);
         try {
             console.log(`[CalendarSync] Opting into event: ${event.id} in guild ${event.guildId}`);
@@ -149,7 +149,7 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
             console.error("[CalendarSync] Event missing guildId:", event);
             return;
         }
-        
+
         setIsLoading(true);
         try {
             console.log(`[CalendarSync] Opting out of event: ${event.id} in guild ${event.guildId}`);
@@ -211,7 +211,7 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
                     <ModalCloseButton onClick={onClose} />
                 </div>
             </ModalHeader>
-            
+
             <ModalContent className={cl("content")}>
                 <div className={cl("sidebar")}>
                     <CalendarFilters
@@ -223,15 +223,15 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
                             outlook: events.filter(e => e.source === "outlook").length,
                         }}
                     />
-                    
+
                     <div className={cl("mini-calendar")}>
                         <MiniCalendar
                             currentDate={viewState.currentDate}
-                            onDateSelect={(date) => setViewState(prev => ({ ...prev, currentDate: date }))}
+                            onDateSelect={date => setViewState(prev => ({ ...prev, currentDate: date }))}
                             events={filteredEvents}
                         />
                     </div>
-                    
+
                     <div className={cl("upcoming-events")}>
                         <h3 className={cl("section-title")}>Upcoming Events</h3>
                         <div className={cl("events-list")}>
@@ -246,7 +246,7 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
                         </div>
                     </div>
                 </div>
-                
+
                 <div className={cl("main")}>
                     {isLoading ? (
                         <div className={cl("loading")}>
@@ -268,7 +268,7 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
                         />
                     )}
                 </div>
-                
+
                 {viewState.selectedEvent && (
                     <EventDetails
                         event={viewState.selectedEvent}
@@ -283,22 +283,22 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
 }
 
 // Mini calendar component for sidebar
-function MiniCalendar({ 
-    currentDate, 
-    onDateSelect, 
-    events 
-}: { 
-    currentDate: Date; 
+function MiniCalendar({
+    currentDate,
+    onDateSelect,
+    events
+}: {
+    currentDate: Date;
     onDateSelect: (date: Date) => void;
     events: CalendarEvent[];
 }) {
     const monthStart = getMonthStart(currentDate);
     const monthEnd = getMonthEnd(currentDate);
     const startDate = getWeekStart(monthStart);
-    
+
     const weeks: Date[][] = [];
-    let current = new Date(startDate);
-    
+    const current = new Date(startDate);
+
     while (current <= monthEnd || weeks.length < 6) {
         const week: Date[] = [];
         for (let i = 0; i < 7; i++) {
@@ -308,9 +308,9 @@ function MiniCalendar({
         weeks.push(week);
         if (weeks.length >= 6) break;
     }
-    
+
     const today = new Date();
-    
+
     return (
         <div className={cl("mini-calendar-grid")}>
             <div className={cl("mini-calendar-header")}>
@@ -325,7 +325,7 @@ function MiniCalendar({
                         const isToday = isSameDay(day, today);
                         const isSelected = isSameDay(day, currentDate);
                         const hasEvents = events.some(e => isSameDay(new Date(e.startTime), day));
-                        
+
                         return (
                             <button
                                 key={di}
@@ -391,7 +391,7 @@ function navigateDate(date: Date, view: CalendarViewState["view"], direction: nu
 
 function formatDateHeader(date: Date, view: CalendarViewState["view"]): string {
     const options: Intl.DateTimeFormatOptions = {};
-    
+
     switch (view) {
         case "month":
             options.month = "long";
@@ -408,7 +408,7 @@ function formatDateHeader(date: Date, view: CalendarViewState["view"]): string {
         case "agenda":
             return "Upcoming Events";
     }
-    
+
     return date.toLocaleDateString(undefined, options);
 }
 

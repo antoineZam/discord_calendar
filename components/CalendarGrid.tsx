@@ -6,6 +6,7 @@
 
 import { classNameFactory } from "@api/Styles";
 import { React } from "@webpack/common";
+
 import { CalendarEvent, CalendarViewState } from "../types";
 import { EventCard } from "./EventCard";
 
@@ -35,22 +36,22 @@ export function CalendarGrid({ view, currentDate, events, selectedEvent, onSelec
 }
 
 // Month View Component
-function MonthView({ 
-    currentDate, 
-    events, 
-    onSelectEvent 
-}: { 
-    currentDate: Date; 
-    events: CalendarEvent[]; 
+function MonthView({
+    currentDate,
+    events,
+    onSelectEvent
+}: {
+    currentDate: Date;
+    events: CalendarEvent[];
     onSelectEvent: (event: CalendarEvent) => void;
 }) {
     const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
     const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
     const startDate = getWeekStart(monthStart);
-    
+
     const weeks: Date[][] = [];
-    let current = new Date(startDate);
-    
+    const current = new Date(startDate);
+
     while (current <= monthEnd || weeks.length < 6) {
         const week: Date[] = [];
         for (let i = 0; i < 7; i++) {
@@ -60,10 +61,10 @@ function MonthView({
         weeks.push(week);
         if (weeks.length >= 6) break;
     }
-    
+
     const today = new Date();
     const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    
+
     return (
         <div className={cl("month-view")}>
             <div className={cl("month-header")}>
@@ -78,7 +79,7 @@ function MonthView({
                             const isCurrentMonth = day.getMonth() === currentDate.getMonth();
                             const isToday = isSameDay(day, today);
                             const dayEvents = events.filter(e => isSameDay(new Date(e.startTime), day));
-                            
+
                             return (
                                 <div
                                     key={di}
@@ -116,27 +117,27 @@ function MonthView({
 }
 
 // Week View Component
-function WeekView({ 
-    currentDate, 
-    events, 
-    onSelectEvent 
-}: { 
-    currentDate: Date; 
-    events: CalendarEvent[]; 
+function WeekView({
+    currentDate,
+    events,
+    onSelectEvent
+}: {
+    currentDate: Date;
+    events: CalendarEvent[];
     onSelectEvent: (event: CalendarEvent) => void;
 }) {
     const weekStart = getWeekStart(currentDate);
     const days: Date[] = [];
-    
+
     for (let i = 0; i < 7; i++) {
         const day = new Date(weekStart);
         day.setDate(day.getDate() + i);
         days.push(day);
     }
-    
+
     const hours = Array.from({ length: 24 }, (_, i) => i);
     const today = new Date();
-    
+
     return (
         <div className={cl("week-view")}>
             <div className={cl("week-header")}>
@@ -190,28 +191,28 @@ function WeekView({
 }
 
 // Day View Component
-function DayView({ 
-    currentDate, 
-    events, 
-    onSelectEvent 
-}: { 
-    currentDate: Date; 
-    events: CalendarEvent[]; 
+function DayView({
+    currentDate,
+    events,
+    onSelectEvent
+}: {
+    currentDate: Date;
+    events: CalendarEvent[];
     onSelectEvent: (event: CalendarEvent) => void;
 }) {
     const hours = Array.from({ length: 24 }, (_, i) => i);
     const dayEvents = events.filter(e => isSameDay(new Date(e.startTime), currentDate));
     const today = new Date();
     const isToday = isSameDay(currentDate, today);
-    
+
     return (
         <div className={cl("day-view")}>
             <div className={cl("day-header")}>
                 <h2 className={cl("day-title", isToday && "today")}>
-                    {currentDate.toLocaleDateString(undefined, { 
-                        weekday: "long", 
-                        month: "long", 
-                        day: "numeric" 
+                    {currentDate.toLocaleDateString(undefined, {
+                        weekday: "long",
+                        month: "long",
+                        day: "numeric"
                     })}
                 </h2>
                 {isToday && <span className={cl("today-badge")}>Today</span>}
@@ -244,22 +245,22 @@ function DayView({
 }
 
 // Agenda View Component
-function AgendaView({ 
-    currentDate, 
-    events, 
-    onSelectEvent 
-}: { 
-    currentDate: Date; 
-    events: CalendarEvent[]; 
+function AgendaView({
+    currentDate,
+    events,
+    onSelectEvent
+}: {
+    currentDate: Date;
+    events: CalendarEvent[];
     onSelectEvent: (event: CalendarEvent) => void;
 }) {
     const upcomingEvents = events
         .filter(e => new Date(e.startTime) >= currentDate)
         .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-    
+
     // Group events by date
     const groupedEvents: Map<string, CalendarEvent[]> = new Map();
-    
+
     upcomingEvents.forEach(event => {
         const dateKey = new Date(event.startTime).toDateString();
         if (!groupedEvents.has(dateKey)) {
@@ -267,9 +268,9 @@ function AgendaView({
         }
         groupedEvents.get(dateKey)!.push(event);
     });
-    
+
     const today = new Date();
-    
+
     return (
         <div className={cl("agenda-view")}>
             {upcomingEvents.length === 0 ? (
@@ -284,16 +285,16 @@ function AgendaView({
                     const date = new Date(dateKey);
                     const isToday = isSameDay(date, today);
                     const isTomorrow = isSameDay(date, new Date(today.getTime() + 86400000));
-                    
-                    let dateLabel = date.toLocaleDateString(undefined, { 
-                        weekday: "long", 
-                        month: "long", 
-                        day: "numeric" 
+
+                    let dateLabel = date.toLocaleDateString(undefined, {
+                        weekday: "long",
+                        month: "long",
+                        day: "numeric"
                     });
-                    
+
                     if (isToday) dateLabel = `Today · ${dateLabel}`;
                     else if (isTomorrow) dateLabel = `Tomorrow · ${dateLabel}`;
-                    
+
                     return (
                         <div key={dateKey} className={cl("agenda-day")}>
                             <div className={cl("agenda-date", isToday && "today")}>
@@ -323,12 +324,12 @@ function EventPill({ event, onClick }: { event: CalendarEvent; onClick: () => vo
         google: "#4285F4",
         outlook: "#0078D4",
     };
-    
+
     return (
         <button
             className={cl("event-pill", event.status === "pending" && "pending")}
-            style={{ 
-                "--event-color": event.color || sourceColors[event.source] 
+            style={{
+                "--event-color": event.color || sourceColors[event.source]
             } as React.CSSProperties}
             onClick={onClick}
         >
@@ -342,19 +343,19 @@ function EventPill({ event, onClick }: { event: CalendarEvent; onClick: () => vo
 function WeekEventBlock({ event, onClick }: { event: CalendarEvent; onClick: () => void }) {
     const startTime = new Date(event.startTime);
     const endTime = new Date(event.endTime);
-    
+
     const startMinutes = startTime.getHours() * 60 + startTime.getMinutes();
     const duration = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
-    
+
     const top = (startMinutes / 60) * 48; // 48px per hour
     const height = Math.max((duration / 60) * 48, 24);
-    
+
     const sourceColors = {
         discord: "var(--brand-experiment)",
         google: "#4285F4",
         outlook: "#0078D4",
     };
-    
+
     return (
         <button
             className={cl("week-event-block", event.status === "pending" && "pending")}
@@ -377,19 +378,19 @@ function WeekEventBlock({ event, onClick }: { event: CalendarEvent; onClick: () 
 function DayEventBlock({ event, onClick }: { event: CalendarEvent; onClick: () => void }) {
     const startTime = new Date(event.startTime);
     const endTime = new Date(event.endTime);
-    
+
     const startMinutes = startTime.getHours() * 60 + startTime.getMinutes();
     const duration = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
-    
+
     const top = (startMinutes / 60) * 48;
     const height = Math.max((duration / 60) * 48, 32);
-    
+
     const sourceColors = {
         discord: "var(--brand-experiment)",
         google: "#4285F4",
         outlook: "#0078D4",
     };
-    
+
     return (
         <button
             className={cl("day-event-block", event.status === "pending" && "pending")}

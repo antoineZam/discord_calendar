@@ -6,6 +6,7 @@
 
 import { classNameFactory } from "@api/Styles";
 import { React } from "@webpack/common";
+
 import { CalendarEvent, DiscordEventEntityType } from "../types";
 
 const cl = classNameFactory("calendar-sync-");
@@ -20,19 +21,19 @@ interface EventDetailsProps {
 export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetailsProps) {
     const startTime = new Date(event.startTime);
     const endTime = new Date(event.endTime);
-    
+
     const sourceColors = {
         discord: "var(--brand-experiment)",
         google: "#4285F4",
         outlook: "#0078D4",
     };
-    
+
     const eventTypeLabels = {
         [DiscordEventEntityType.STAGE_INSTANCE]: "Stage Event",
         [DiscordEventEntityType.VOICE]: "Voice Event",
         [DiscordEventEntityType.EXTERNAL]: "External Event",
     };
-    
+
     return (
         <div className={cl("event-details")}>
             <div className={cl("event-details-header")}>
@@ -43,32 +44,32 @@ export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetails
                     </svg>
                 </button>
             </div>
-            
+
             <div className={cl("event-details-content")}>
                 {/* Cover Image */}
                 {event.coverImage && (
                     <div className={cl("event-details-cover")}>
-                        <img 
-                            src={event.coverImage} 
+                        <img
+                            src={event.coverImage}
                             alt={event.title}
                             loading="eager"
                             decoding="async"
                         />
                     </div>
                 )}
-                
+
                 {/* Source Badge */}
-                <div 
+                <div
                     className={cl("event-details-source")}
                     style={{ "--source-color": event.color || sourceColors[event.source] } as React.CSSProperties}
                 >
                     {getSourceIcon(event.source)}
                     <span>{getSourceLabel(event)}</span>
                 </div>
-                
+
                 {/* Title */}
                 <h2 className={cl("event-details-title")}>{event.title}</h2>
-                
+
                 {/* Status Badge */}
                 {event.source === "discord" && (
                     <div className={cl("event-details-status", event.status)}>
@@ -89,7 +90,7 @@ export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetails
                         )}
                     </div>
                 )}
-                
+
                 {/* Date & Time */}
                 <div className={cl("event-details-section")}>
                     <div className={cl("event-details-row")}>
@@ -98,9 +99,9 @@ export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetails
                         </svg>
                         <div className={cl("event-details-datetime")}>
                             <span className={cl("date")}>
-                                {startTime.toLocaleDateString(undefined, { 
+                                {startTime.toLocaleDateString(undefined, {
                                     weekday: "long",
-                                    month: "long", 
+                                    month: "long",
                                     day: "numeric",
                                     year: "numeric"
                                 })}
@@ -116,7 +117,7 @@ export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetails
                         </div>
                     </div>
                 </div>
-                
+
                 {/* Location */}
                 {event.location && (
                     <div className={cl("event-details-section")}>
@@ -128,7 +129,7 @@ export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetails
                         </div>
                     </div>
                 )}
-                
+
                 {/* Event Type (Discord) */}
                 {event.entityType && (
                     <div className={cl("event-details-section")}>
@@ -150,15 +151,15 @@ export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetails
                         </div>
                     </div>
                 )}
-                
+
                 {/* Server (Discord) */}
                 {event.guildName && (
                     <div className={cl("event-details-section")}>
                         <div className={cl("event-details-row")}>
                             {event.guildIcon ? (
-                                <img 
-                                    src={event.guildIcon} 
-                                    alt="" 
+                                <img
+                                    src={event.guildIcon}
+                                    alt=""
                                     className={cl("guild-icon")}
                                 />
                             ) : (
@@ -170,15 +171,15 @@ export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetails
                         </div>
                     </div>
                 )}
-                
+
                 {/* Creator (Discord) */}
                 {event.creatorName && (
                     <div className={cl("event-details-section")}>
                         <div className={cl("event-details-row")}>
                             {event.creatorAvatar ? (
-                                <img 
-                                    src={event.creatorAvatar} 
-                                    alt="" 
+                                <img
+                                    src={event.creatorAvatar}
+                                    alt=""
                                     className={cl("creator-avatar")}
                                 />
                             ) : (
@@ -190,7 +191,7 @@ export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetails
                         </div>
                     </div>
                 )}
-                
+
                 {/* Organizer (External) */}
                 {event.organizer && (
                     <div className={cl("event-details-section")}>
@@ -202,7 +203,7 @@ export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetails
                         </div>
                     </div>
                 )}
-                
+
                 {/* Attendees Count */}
                 {(event.interestedCount !== undefined || event.attendees) && (
                     <div className={cl("event-details-section")}>
@@ -211,7 +212,7 @@ export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetails
                                 <path fill="currentColor" d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
                             </svg>
                             <span>
-                                {event.interestedCount !== undefined 
+                                {event.interestedCount !== undefined
                                     ? `${event.interestedCount} interested`
                                     : `${event.attendees?.length || 0} attendees`
                                 }
@@ -219,7 +220,7 @@ export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetails
                         </div>
                     </div>
                 )}
-                
+
                 {/* Attendees List (External) */}
                 {event.attendees && event.attendees.length > 0 && (
                     <div className={cl("event-details-section")}>
@@ -243,7 +244,7 @@ export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetails
                         </div>
                     </div>
                 )}
-                
+
                 {/* Description */}
                 {event.description && (
                     <div className={cl("event-details-section")}>
@@ -251,12 +252,12 @@ export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetails
                         <p className={cl("event-description")}>{event.description}</p>
                     </div>
                 )}
-                
+
                 {/* Action Buttons (Discord only) */}
                 {event.source === "discord" && (
                     <div className={cl("event-details-actions")}>
                         {event.status === "opted_in" ? (
-                            <button 
+                            <button
                                 className={cl("action-btn", "secondary")}
                                 onClick={() => onOptOut(event)}
                             >
@@ -266,7 +267,7 @@ export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetails
                                 Not Interested
                             </button>
                         ) : (
-                            <button 
+                            <button
                                 className={cl("action-btn", "primary")}
                                 onClick={() => onOptIn(event)}
                             >

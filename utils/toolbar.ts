@@ -4,14 +4,14 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import { findByProps, findByCode } from "@webpack";
-import { React, FluxDispatcher } from "@webpack/common";
+import { findByProps } from "@webpack";
+import { FluxDispatcher,React } from "@webpack/common";
 
 // Store for toolbar buttons
 const toolbarButtons: Map<string, React.ComponentType> = new Map();
 
 // Toolbar header bar component
-let HeaderBarContainer: any = null;
+const HeaderBarContainer: any = null;
 
 export function addToolbarButton(id: string, component: React.ComponentType) {
     toolbarButtons.set(id, component);
@@ -40,10 +40,10 @@ function triggerRerender() {
 export function patchToolbar() {
     // This is a simplified version - in a real implementation you'd use
     // Vencord's patching system to inject the button into the header bar
-    
+
     const ChannelHeader = findByProps("Title", "Divider", "Icon");
     if (!ChannelHeader) return;
-    
+
     // The actual patching would be done using Vencord's Patcher API
     // For now, we'll use the toolbox actions feature which is built-in
 }

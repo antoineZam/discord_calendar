@@ -6,7 +6,8 @@
 
 import { classNameFactory } from "@api/Styles";
 import { React, useState } from "@webpack/common";
-import { settings, oauthManager } from "../index";
+
+import { oauthManager, settings } from "../index";
 
 const cl = classNameFactory("calendar-sync-settings-");
 
@@ -76,16 +77,16 @@ export function SettingsPanel() {
                         <div className={cl("connection-info")}>
                             <h4>Google Calendar</h4>
                             <span className={cl("connection-status", googleAuthStatus)}>
-                                {googleAuthStatus === "connected" ? "Connected" : 
+                                {googleAuthStatus === "connected" ? "Connected" :
                                  googleAuthStatus === "connecting" ? "Connecting..." : "Not connected"}
                             </span>
                         </div>
-                        <button 
+                        <button
                             className={cl("connection-btn", googleAuthStatus === "connected" ? "disconnect" : "connect")}
                             onClick={handleGoogleAuth}
                             disabled={googleAuthStatus === "connecting"}
                         >
-                            {googleAuthStatus === "connected" ? "Disconnect" : 
+                            {googleAuthStatus === "connected" ? "Disconnect" :
                              googleAuthStatus === "connecting" ? "..." : "Connect"}
                         </button>
                     </div>
@@ -103,16 +104,16 @@ export function SettingsPanel() {
                         <div className={cl("connection-info")}>
                             <h4>Outlook Calendar</h4>
                             <span className={cl("connection-status", outlookAuthStatus)}>
-                                {outlookAuthStatus === "connected" ? "Connected" : 
+                                {outlookAuthStatus === "connected" ? "Connected" :
                                  outlookAuthStatus === "connecting" ? "Connecting..." : "Not connected"}
                             </span>
                         </div>
-                        <button 
+                        <button
                             className={cl("connection-btn", outlookAuthStatus === "connected" ? "disconnect" : "connect")}
                             onClick={handleOutlookAuth}
                             disabled={outlookAuthStatus === "connecting" || !settings.store.outlookClientId}
                         >
-                            {outlookAuthStatus === "connected" ? "Disconnect" : 
+                            {outlookAuthStatus === "connected" ? "Disconnect" :
                              outlookAuthStatus === "connecting" ? "..." : "Connect"}
                         </button>
                     </div>
@@ -126,7 +127,7 @@ export function SettingsPanel() {
 
             <div className={cl("section")}>
                 <h3 className={cl("section-title")}>Setup Instructions</h3>
-                
+
                 <div className={cl("instructions")}>
                     <div className={cl("instruction-card")}>
                         <h4>Google Calendar</h4>
@@ -137,7 +138,7 @@ export function SettingsPanel() {
                         <h4>Outlook Calendar Setup</h4>
                         <p>Outlook requires an Azure App registration:</p>
                         <ol>
-                            <li>Go to <a href="https://portal.azure.com/" target="_blank">Azure Portal</a></li>
+                            <li>Go to <a href="https://portal.azure.com/" target="_blank" rel="noreferrer">Azure Portal</a></li>
                             <li>Navigate to Azure Active Directory → App registrations</li>
                             <li>Click "New registration"</li>
                             <li>Add redirect URI: <code>https://login.microsoftonline.com/common/oauth2/nativeclient</code></li>

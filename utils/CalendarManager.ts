@@ -5,13 +5,12 @@
  */
 
 import { GuildScheduledEventStore, GuildStore, RestAPI } from "@webpack/common";
-import { 
-    CalendarEvent, 
-    DiscordGuildEvent, 
-    GoogleCalendarEvent, 
-    OutlookCalendarEvent,
-    DiscordEventEntityType
-} from "../types";
+
+import {
+    CalendarEvent,
+    DiscordGuildEvent,
+    GoogleCalendarEvent,
+    OutlookCalendarEvent } from "../types";
 import { GOOGLE_CLIENT_ID } from "./OAuthManager";
 
 interface Settings {
@@ -33,34 +32,34 @@ export class CalendarManager {
     private syncInterval: NodeJS.Timeout | null = null;
     private cachedEvents: CalendarEvent[] = [];
     private lastSync: Date | null = null;
-    
+
     // Token storage
     private googleAccessToken: string | null = null;
     private googleTokenExpiry: number = 0;
     private outlookAccessToken: string | null = null;
     private outlookTokenExpiry: number = 0;
-    
+
     constructor(settings: Settings) {
         this.settings = settings;
     }
-    
+
     startSync() {
         // Delay initial sync to allow Discord stores to load
         console.log("[CalendarSync] Waiting for Discord to fully load...");
         setTimeout(() => {
             console.log("[CalendarSync] Starting initial sync...");
             this.syncAllCalendars();
-            
+
             // Set up interval
             const intervalMs = this.settings.store.syncIntervalMinutes * 60 * 1000;
             this.syncInterval = setInterval(() => {
                 this.syncAllCalendars();
             }, intervalMs);
-            
+
             console.log(`[CalendarSync] Started sync with ${this.settings.store.syncIntervalMinutes}min interval`);
         }, 3000); // Wait 3 seconds for Discord to load
     }
-    
+
     stopSync() {
         if (this.syncInterval) {
             clearInterval(this.syncInterval);
@@ -68,12 +67,12 @@ export class CalendarManager {
         }
         console.log("[CalendarSync] Stopped sync");
     }
-    
+
     async syncAllCalendars() {
         console.log("[CalendarSync] Syncing all calendars...");
-        
+
         const events: CalendarEvent[] = [];
-        
+
         // Sync Discord events
         if (this.settings.store.discordEventsEnabled) {
             try {
@@ -83,7 +82,7 @@ export class CalendarManager {
                 console.error("[CalendarSync] Failed to fetch Discord events:", err);
             }
         }
-        
+
         // Sync Google Calendar
         if (this.settings.store.googleCalendarEnabled && this.settings.store.googleRefreshToken) {
             try {
@@ -93,7 +92,7 @@ export class CalendarManager {
                 console.error("[CalendarSync] Failed to fetch Google events:", err);
             }
         }
-        
+
         // Sync Outlook Calendar
         if (this.settings.store.outlookCalendarEnabled && this.settings.store.outlookRefreshToken) {
             try {
@@ -103,57 +102,57 @@ export class CalendarManager {
                 console.error("[CalendarSync] Failed to fetch Outlook events:", err);
             }
         }
-        
+
         this.cachedEvents = events;
         this.lastSync = new Date();
-        
+
         console.log(`[CalendarSync] Synced ${events.length} events`);
     }
-    
+
     async getAllEvents(start: Date, end: Date): Promise<CalendarEvent[]> {
         // If cache is stale, refresh
         if (!this.lastSync || Date.now() - this.lastSync.getTime() > 60000) {
             await this.syncAllCalendars();
         }
-        
+
         return this.cachedEvents.filter(event => {
             const eventStart = new Date(event.startTime);
             const eventEnd = new Date(event.endTime);
             return eventStart <= end && eventEnd >= start;
         });
     }
-    
+
     // Discord Events
     async fetchDiscordEvents(): Promise<CalendarEvent[]> {
         const events: CalendarEvent[] = [];
-        
+
         // Check if stores are available
         if (!GuildStore) {
             console.warn("[CalendarSync] GuildStore not available yet");
             return events;
         }
-        
+
         if (!GuildScheduledEventStore) {
             console.warn("[CalendarSync] GuildScheduledEventStore not available yet");
             return events;
         }
-        
+
         const guilds = Object.values(GuildStore.getGuilds()) as any[];
         const optedInEvents = this.getOptedInEvents();
-        
+
         console.log(`[CalendarSync] Fetching events from ${guilds.length} guilds...`);
-        
+
         for (const guild of guilds) {
             try {
                 // Fetch events directly via REST API
                 let guildEvents: any = {};
-                
+
                 try {
                     const response = await RestAPI.get({
                         url: `/guilds/${guild.id}/scheduled-events`,
                         query: { with_user_count: true }
                     });
-                    
+
                     if (response?.body && Array.isArray(response.body)) {
                         for (const event of response.body) {
                             guildEvents[event.id] = event;
@@ -162,7 +161,7 @@ export class CalendarManager {
                 } catch (apiErr) {
                     // Fallback to store if API fails
                     console.log(`[CalendarSync] API fetch failed for ${guild.name}, trying store...`);
-                    
+
                     try {
                         if (GuildScheduledEventStore && typeof GuildScheduledEventStore.getGuildScheduledEventsForGuild === "function") {
                             guildEvents = GuildScheduledEventStore.getGuildScheduledEventsForGuild(guild.id) || {};
@@ -171,40 +170,40 @@ export class CalendarManager {
                         guildEvents = {};
                     }
                 }
-                
+
                 const eventValues = Object.values(guildEvents) as DiscordGuildEvent[];
-                
+
                 if (eventValues.length > 0) {
                     console.log(`[CalendarSync] Found ${eventValues.length} events in ${guild.name}`);
                 }
-                
+
                 for (const rawEvent of eventValues) {
                     if (!rawEvent || !rawEvent.id) continue;
-                    
-                    const isOptedIn = optedInEvents.includes(rawEvent.id) || 
+
+                    const isOptedIn = optedInEvents.includes(rawEvent.id) ||
                                       rawEvent.user_rsvp?.interested === true;
-                    
+
                     // Build high-resolution image URLs
-                    const guildIconUrl = guild.icon 
+                    const guildIconUrl = guild.icon
                         ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.${guild.icon.startsWith("a_") ? "gif" : "webp"}?size=128`
                         : undefined;
-                    
+
                     const creatorAvatarUrl = rawEvent.creator?.avatar
                         ? `https://cdn.discordapp.com/avatars/${rawEvent.creator.id}/${rawEvent.creator.avatar}.${rawEvent.creator.avatar.startsWith("a_") ? "gif" : "webp"}?size=128`
                         : undefined;
-                    
+
                     // Event cover images - use highest quality (800x320 is the native size, but we can request larger)
                     const coverImageUrl = rawEvent.image
                         ? `https://cdn.discordapp.com/guild-events/${rawEvent.id}/${rawEvent.image}.webp?size=1024`
                         : undefined;
-                    
+
                     const event: CalendarEvent = {
                         id: rawEvent.id,
                         source: "discord",
                         title: rawEvent.name || "Untitled Event",
                         description: rawEvent.description,
                         startTime: new Date(rawEvent.scheduled_start_time),
-                        endTime: rawEvent.scheduled_end_time 
+                        endTime: rawEvent.scheduled_end_time
                             ? new Date(rawEvent.scheduled_end_time)
                             : new Date(new Date(rawEvent.scheduled_start_time).getTime() + 3600000),
                         status: isOptedIn ? "opted_in" : "pending",
@@ -221,26 +220,26 @@ export class CalendarManager {
                         location: rawEvent.entity_metadata?.location,
                         color: "#5865f2",
                     };
-                    
+
                     events.push(event);
                 }
             } catch (err) {
                 console.error(`[CalendarSync] Failed to process guild ${guild.name}:`, err);
             }
         }
-        
+
         console.log(`[CalendarSync] Total Discord events found: ${events.length}`);
         return events;
     }
-    
+
     // Google Calendar Events
     async fetchGoogleEvents(): Promise<CalendarEvent[]> {
         const accessToken = await this.getGoogleAccessToken();
         if (!accessToken) return [];
-        
+
         const now = new Date();
         const threeMonthsLater = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
-        
+
         const params = new URLSearchParams({
             timeMin: now.toISOString(),
             timeMax: threeMonthsLater.toISOString(),
@@ -248,7 +247,7 @@ export class CalendarManager {
             orderBy: "startTime",
             maxResults: "100",
         });
-        
+
         const response = await fetch(
             `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`,
             {
@@ -257,25 +256,25 @@ export class CalendarManager {
                 },
             }
         );
-        
+
         if (!response.ok) {
             throw new Error(`Google API error: ${response.status}`);
         }
-        
+
         const data = await response.json();
         const events: CalendarEvent[] = [];
-        
+
         for (const item of data.items || []) {
             const googleEvent = item as GoogleCalendarEvent;
-            
-            const startTime = googleEvent.start.dateTime 
+
+            const startTime = googleEvent.start.dateTime
                 ? new Date(googleEvent.start.dateTime)
                 : new Date(googleEvent.start.date!);
-            
+
             const endTime = googleEvent.end.dateTime
                 ? new Date(googleEvent.end.dateTime)
                 : new Date(googleEvent.end.date!);
-            
+
             const event: CalendarEvent = {
                 id: `google-${googleEvent.id}`,
                 source: "google",
@@ -298,28 +297,28 @@ export class CalendarManager {
                     email: googleEvent.organizer.email,
                 } : undefined,
             };
-            
+
             events.push(event);
         }
-        
+
         return events;
     }
-    
+
     // Outlook Calendar Events
     async fetchOutlookEvents(): Promise<CalendarEvent[]> {
         const accessToken = await this.getOutlookAccessToken();
         if (!accessToken) return [];
-        
+
         const now = new Date();
         const threeMonthsLater = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
-        
+
         const params = new URLSearchParams({
             startDateTime: now.toISOString(),
             endDateTime: threeMonthsLater.toISOString(),
             $top: "100",
             $orderby: "start/dateTime",
         });
-        
+
         const response = await fetch(
             `https://graph.microsoft.com/v1.0/me/calendarView?${params}`,
             {
@@ -328,17 +327,17 @@ export class CalendarManager {
                 },
             }
         );
-        
+
         if (!response.ok) {
             throw new Error(`Microsoft Graph API error: ${response.status}`);
         }
-        
+
         const data = await response.json();
         const events: CalendarEvent[] = [];
-        
+
         for (const item of data.value || []) {
             const outlookEvent = item as OutlookCalendarEvent;
-            
+
             const event: CalendarEvent = {
                 id: `outlook-${outlookEvent.id}`,
                 source: "outlook",
@@ -361,22 +360,22 @@ export class CalendarManager {
                     email: outlookEvent.organizer.emailAddress.address,
                 } : undefined,
             };
-            
+
             events.push(event);
         }
-        
+
         return events;
     }
-    
+
     // Token management
     private async getGoogleAccessToken(): Promise<string | null> {
         if (this.googleAccessToken && Date.now() < this.googleTokenExpiry) {
             return this.googleAccessToken;
         }
-        
+
         const refreshToken = this.settings.store.googleRefreshToken;
         if (!refreshToken) return null;
-        
+
         try {
             const response = await fetch("https://oauth2.googleapis.com/token", {
                 method: "POST",
@@ -387,28 +386,28 @@ export class CalendarManager {
                     grant_type: "refresh_token",
                 }),
             });
-            
+
             if (!response.ok) throw new Error("Token refresh failed");
-            
+
             const data = await response.json();
             this.googleAccessToken = data.access_token;
             this.googleTokenExpiry = Date.now() + (data.expires_in * 1000) - 60000;
-            
+
             return this.googleAccessToken;
         } catch (err) {
             console.error("[CalendarSync] Failed to refresh Google token:", err);
             return null;
         }
     }
-    
+
     private async getOutlookAccessToken(): Promise<string | null> {
         if (this.outlookAccessToken && Date.now() < this.outlookTokenExpiry) {
             return this.outlookAccessToken;
         }
-        
+
         const refreshToken = this.settings.store.outlookRefreshToken;
         if (!refreshToken) return null;
-        
+
         try {
             const response = await fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", {
                 method: "POST",
@@ -420,20 +419,20 @@ export class CalendarManager {
                     scope: "Calendars.Read offline_access",
                 }),
             });
-            
+
             if (!response.ok) throw new Error("Token refresh failed");
-            
+
             const data = await response.json();
             this.outlookAccessToken = data.access_token;
             this.outlookTokenExpiry = Date.now() + (data.expires_in * 1000) - 60000;
-            
+
             return this.outlookAccessToken;
         } catch (err) {
             console.error("[CalendarSync] Failed to refresh Outlook token:", err);
             return null;
         }
     }
-    
+
     // Opt-in management
     getOptedInEvents(): string[] {
         try {
@@ -442,48 +441,48 @@ export class CalendarManager {
             return [];
         }
     }
-    
+
     setOptedInEvents(events: string[]) {
         this.settings.store.optedInEvents = JSON.stringify(events);
     }
-    
+
     async optInToEvent(eventId: string, guildId: string) {
         console.log(`[CalendarSync] Opting into event ${eventId} in guild ${guildId}`);
-        
+
         try {
             // Use Vencord's RestAPI which handles authentication automatically
             await RestAPI.put({
                 url: `/guilds/${guildId}/scheduled-events/${eventId}/users/@me`,
             });
-            
+
             console.log(`[CalendarSync] Successfully opted into event ${eventId}`);
-            
+
             // Update local state
             const optedIn = this.getOptedInEvents();
             if (!optedIn.includes(eventId)) {
                 optedIn.push(eventId);
                 this.setOptedInEvents(optedIn);
             }
-            
+
             // Refresh events
             await this.syncAllCalendars();
         } catch (err: any) {
-            console.error(`[CalendarSync] Opt-in failed:`, err);
+            console.error("[CalendarSync] Opt-in failed:", err);
             throw new Error(`Failed to opt in: ${err.message || err}`);
         }
     }
-    
+
     async optOutOfEvent(eventId: string, guildId: string) {
         console.log(`[CalendarSync] Opting out of event ${eventId} in guild ${guildId}`);
-        
+
         try {
             // Use Vencord's RestAPI which handles authentication automatically
             await RestAPI.del({
                 url: `/guilds/${guildId}/scheduled-events/${eventId}/users/@me`,
             });
-            
+
             console.log(`[CalendarSync] Successfully opted out of event ${eventId}`);
-            
+
             // Update local state
             const optedIn = this.getOptedInEvents();
             const index = optedIn.indexOf(eventId);
@@ -491,11 +490,11 @@ export class CalendarManager {
                 optedIn.splice(index, 1);
                 this.setOptedInEvents(optedIn);
             }
-            
+
             // Refresh events
             await this.syncAllCalendars();
         } catch (err: any) {
-            console.error(`[CalendarSync] Opt-out failed:`, err);
+            console.error("[CalendarSync] Opt-out failed:", err);
             throw new Error(`Failed to opt out: ${err.message || err}`);
         }
     }
