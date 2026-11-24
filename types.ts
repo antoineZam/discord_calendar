@@ -28,8 +28,6 @@ export interface CalendarEvent {
     coverImage?: string;
     entityType?: DiscordEventEntityType;
     // External calendar fields
-    calendarName?: string;
-    color?: string;
     attendees?: EventAttendee[];
     organizer?: {
         name?: string;
@@ -149,10 +147,10 @@ export interface CalendarViewState {
     currentDate: Date;
     view: "month" | "week" | "day" | "agenda";
     selectedEvent: CalendarEvent | null;
-    filters: {
-        showDiscord: boolean;
-        showGoogle: boolean;
-        showOutlook: boolean;
-        showPending: boolean;
-    };
+    filters: EventFilters;
+}
+
+export interface EventFilters {
+    sources: Record<EventSource, boolean>;
+    showPending: boolean;
 }

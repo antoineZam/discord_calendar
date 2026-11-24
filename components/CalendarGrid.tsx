@@ -8,6 +8,7 @@ import { classNameFactory } from "@api/Styles";
 import { React } from "@webpack/common";
 
 import { CalendarEvent, CalendarViewState } from "../types";
+import { sourceColor } from "../utils/sources";
 import { EventCard } from "./EventCard";
 import { CalendarIcon } from "./Icons";
 
@@ -318,18 +319,10 @@ function AgendaView({
 
 // Event Pill for Month View
 function EventPill({ event, onClick }: { event: CalendarEvent; onClick: () => void }) {
-    const sourceColors = {
-        discord: "var(--brand-experiment)",
-        google: "#4285F4",
-        outlook: "#0078D4",
-    };
-
     return (
         <button
             className={cl("event-pill", event.status === "pending" && "pending")}
-            style={{
-                "--event-color": event.color || sourceColors[event.source]
-            } as React.CSSProperties}
+            style={sourceColor(event.source)}
             onClick={onClick}
         >
             <span className={cl("event-pill-dot")} />
@@ -349,20 +342,10 @@ function WeekEventBlock({ event, onClick }: { event: CalendarEvent; onClick: () 
     const top = (startMinutes / 60) * 48; // 48px per hour
     const height = Math.max((duration / 60) * 48, 24);
 
-    const sourceColors = {
-        discord: "var(--brand-experiment)",
-        google: "#4285F4",
-        outlook: "#0078D4",
-    };
-
     return (
         <button
             className={cl("week-event-block", event.status === "pending" && "pending")}
-            style={{
-                top: `${top}px`,
-                height: `${height}px`,
-                "--event-color": event.color || sourceColors[event.source],
-            } as React.CSSProperties}
+            style={{ top: `${top}px`, height: `${height}px`, ...sourceColor(event.source) }}
             onClick={onClick}
         >
             <span className={cl("event-block-time")}>
@@ -384,20 +367,10 @@ function DayEventBlock({ event, onClick }: { event: CalendarEvent; onClick: () =
     const top = (startMinutes / 60) * 48;
     const height = Math.max((duration / 60) * 48, 32);
 
-    const sourceColors = {
-        discord: "var(--brand-experiment)",
-        google: "#4285F4",
-        outlook: "#0078D4",
-    };
-
     return (
         <button
             className={cl("day-event-block", event.status === "pending" && "pending")}
-            style={{
-                top: `${top}px`,
-                height: `${height}px`,
-                "--event-color": event.color || sourceColors[event.source],
-            } as React.CSSProperties}
+            style={{ top: `${top}px`, height: `${height}px`, ...sourceColor(event.source) }}
             onClick={onClick}
         >
             <div className={cl("event-block-content")}>

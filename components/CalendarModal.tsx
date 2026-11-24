@@ -9,9 +9,10 @@ import { ModalCloseButton, ModalContent, ModalHeader, ModalRoot, ModalSize, open
 import { React, useEffect, useMemo, useState } from "@webpack/common";
 
 import { settings } from "../settings";
-import { CalendarEvent, CalendarViewState } from "../types";
+import { CalendarEvent, CalendarViewState, EventFilters, EventSource } from "../types";
 import { calendarManager } from "../utils/CalendarManager";
 import { logger } from "../utils/logger";
+import { SOURCE_KEYS } from "../utils/sources";
 import { CalendarFilters } from "./CalendarFilters";
 import { CalendarGrid } from "./CalendarGrid";
 import { EventCard } from "./EventCard";
@@ -38,9 +39,11 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
         view: settings.store.defaultCalendarView as CalendarViewState["view"] || "month",
         selectedEvent: null,
         filters: {
-            showDiscord: settings.store.discordEventsEnabled,
-            showGoogle: settings.store.googleCalendarEnabled,
-            showOutlook: settings.store.outlookCalendarEnabled,
+            sources: {
+                discord: settings.store.discordEventsEnabled,
+                google: settings.store.googleCalendarEnabled,
+                outlook: settings.store.outlookCalendarEnabled,
+            },
             showPending: settings.store.showPendingEvents,
         },
     });
@@ -72,20 +75,17 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
         }
     }
 
-    // Filter events based on current filters
-    const filteredEvents = useMemo(() => {
-        return events.filter(event => {
-            // Filter by source
-            if (event.source === "discord" && !viewState.filters.showDiscord) return false;
-            if (event.source === "google" && !viewState.filters.showGoogle) return false;
-            if (event.source === "outlook" && !viewState.filters.showOutlook) return false;
+    const { filters } = viewState;
+    const filteredEvents = useMemo(
+        () => events.filter(event => filters.sources[event.source] && (event.status !== "pending" || filters.showPending)),
+        [events, filters]
+    );
 
-            // Filter pending events
-            if (event.status === "pending" && !viewState.filters.showPending) return false;
-
-            return true;
-        });
-    }, [events, viewState.filters]);
+    const eventCounts = useMemo(() => {
+        const counts = Object.fromEntries(SOURCE_KEYS.map(source => [source, 0])) as Record<EventSource, number>;
+        for (const event of events) counts[event.source]++;
+        return counts;
+    }, [events]);
 
     // Navigation functions
     function navigatePrevious() {
@@ -117,11 +117,8 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
         setViewState(prev => ({ ...prev, selectedEvent: event }));
     }
 
-    function updateFilter(key: keyof CalendarViewState["filters"], value: boolean) {
-        setViewState(prev => ({
-            ...prev,
-            filters: { ...prev.filters, [key]: value },
-        }));
+    function setFilters(filters: EventFilters) {
+        setViewState(prev => ({ ...prev, filters }));
     }
 
     async function handleOptIn(event: CalendarEvent) {
@@ -212,13 +209,9 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
             <ModalContent className={cl("content")}>
                 <div className={cl("sidebar")}>
                     <CalendarFilters
-                        filters={viewState.filters}
-                        onUpdateFilter={updateFilter}
-                        eventCounts={{
-                            discord: events.filter(e => e.source === "discord").length,
-                            google: events.filter(e => e.source === "google").length,
-                            outlook: events.filter(e => e.source === "outlook").length,
-                        }}
+                        filters={filters}
+                        counts={eventCounts}
+                        onChange={setFilters}
                     />
 
                     <div className={cl("mini-calendar")}>

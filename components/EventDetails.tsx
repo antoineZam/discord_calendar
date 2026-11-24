@@ -9,6 +9,7 @@ import { React } from "@webpack/common";
 import type { ComponentType } from "react";
 
 import { CalendarEvent, DiscordEventEntityType } from "../types";
+import { sourceColor, sourceLabel } from "../utils/sources";
 import { AccountCircleIcon, CalendarIcon, CheckCircleIcon, CheckIcon, CloseIcon, IconProps, LocationIcon, MicIcon, PeopleIcon, PersonIcon, SourceIcon, StageIcon } from "./Icons";
 
 const cl = classNameFactory("calendar-sync-");
@@ -30,12 +31,6 @@ export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetails
     const entityType = event.entityType && ENTITY_TYPES[event.entityType];
     const startTime = new Date(event.startTime);
     const endTime = new Date(event.endTime);
-
-    const sourceColors = {
-        discord: "var(--brand-experiment)",
-        google: "#4285F4",
-        outlook: "#0078D4",
-    };
 
     return (
         <div className={cl("event-details")}>
@@ -62,10 +57,10 @@ export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetails
                 {/* Source Badge */}
                 <div
                     className={cl("event-details-source")}
-                    style={{ "--source-color": event.color || sourceColors[event.source] } as React.CSSProperties}
+                    style={sourceColor(event.source)}
                 >
                     <SourceIcon source={event.source} />
-                    <span>{getSourceLabel(event)}</span>
+                    <span>{sourceLabel(event)}</span>
                 </div>
 
                 {/* Title */}
@@ -251,18 +246,5 @@ export function EventDetails({ event, onClose, onOptIn, onOptOut }: EventDetails
             </div>
         </div>
     );
-}
-
-function getSourceLabel(event: CalendarEvent): string {
-    switch (event.source) {
-        case "discord":
-            return event.guildName || "Discord Event";
-        case "google":
-            return event.calendarName || "Google Calendar";
-        case "outlook":
-            return event.calendarName || "Outlook Calendar";
-        default:
-            return "Event";
-    }
 }
 

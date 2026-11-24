@@ -195,7 +195,6 @@ export class CalendarManager {
                         coverImage: coverImageUrl,
                         entityType: rawEvent.entity_type,
                         location: rawEvent.entity_metadata?.location,
-                        color: "#5865f2",
                     };
 
                     events.push(event);
@@ -262,8 +261,6 @@ export class CalendarManager {
                 endTime,
                 allDay: !googleEvent.start.dateTime,
                 status: "opted_in", // External events are always "opted in"
-                calendarName: "Google Calendar",
-                color: "#4285F4",
                 attendees: googleEvent.attendees?.map(a => ({
                     name: a.displayName,
                     email: a.email,
@@ -325,8 +322,6 @@ export class CalendarManager {
                 endTime: new Date(outlookEvent.end.dateTime + "Z"),
                 allDay: outlookEvent.isAllDay,
                 status: "opted_in",
-                calendarName: "Outlook Calendar",
-                color: "#0078D4",
                 attendees: outlookEvent.attendees?.map(a => ({
                     name: a.emailAddress.name,
                     email: a.emailAddress.address,

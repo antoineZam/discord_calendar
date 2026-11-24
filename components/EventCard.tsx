@@ -8,6 +8,7 @@ import { classNameFactory } from "@api/Styles";
 import { React } from "@webpack/common";
 
 import { CalendarEvent } from "../types";
+import { sourceColor, sourceLabel } from "../utils/sources";
 import { AccountCircleIcon, ClockIcon, LocationIcon, PeopleIcon, SourceIcon } from "./Icons";
 
 const cl = classNameFactory("calendar-sync-");
@@ -22,17 +23,11 @@ export function EventCard({ event, compact = false, onClick }: EventCardProps) {
     const startTime = new Date(event.startTime);
     const endTime = new Date(event.endTime);
 
-    const sourceColors = {
-        discord: "var(--brand-experiment)",
-        google: "#4285F4",
-        outlook: "#0078D4",
-    };
-
     if (compact) {
         return (
             <button
                 className={cl("event-card", "compact", event.status === "pending" && "pending")}
-                style={{ "--event-color": event.color || sourceColors[event.source] } as React.CSSProperties}
+                style={sourceColor(event.source)}
                 onClick={onClick}
             >
                 <div className={cl("event-card-indicator")} />
@@ -52,7 +47,7 @@ export function EventCard({ event, compact = false, onClick }: EventCardProps) {
     return (
         <button
             className={cl("event-card", event.status === "pending" && "pending")}
-            style={{ "--event-color": event.color || sourceColors[event.source] } as React.CSSProperties}
+            style={sourceColor(event.source)}
             onClick={onClick}
         >
             <div className={cl("event-card-header")}>
@@ -60,7 +55,7 @@ export function EventCard({ event, compact = false, onClick }: EventCardProps) {
                 <div className={cl("event-card-meta")}>
                     <span className={cl("event-card-source")}>
                         <SourceIcon source={event.source} size={14} />
-                        <span>{getSourceLabel(event)}</span>
+                        <span>{sourceLabel(event)}</span>
                     </span>
                     {event.status === "pending" && (
                         <span className={cl("event-card-status")}>Not opted in</span>
@@ -134,19 +129,6 @@ function formatEventTime(start: Date, end: Date, allDay?: boolean): string {
     }
 
     return `${start.toLocaleDateString(undefined, dateOptions)} ${start.toLocaleTimeString(undefined, timeOptions)} - ${end.toLocaleDateString(undefined, dateOptions)} ${end.toLocaleTimeString(undefined, timeOptions)}`;
-}
-
-function getSourceLabel(event: CalendarEvent): string {
-    switch (event.source) {
-        case "discord":
-            return event.guildName || "Discord Event";
-        case "google":
-            return event.calendarName || "Google Calendar";
-        case "outlook":
-            return event.calendarName || "Outlook Calendar";
-        default:
-            return "Event";
-    }
 }
 
 function truncateText(text: string, maxLength: number): string {

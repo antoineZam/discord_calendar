@@ -5,85 +5,41 @@
  */
 
 import { classNameFactory } from "@api/Styles";
-import { React } from "@webpack/common";
 
-import { CalendarViewState } from "../types";
-import { DiscordIcon, GoogleIcon, OutlookIcon } from "./Icons";
+import { EventFilters, EventSource } from "../types";
+import { SOURCE_KEYS, sourceColor, SOURCES } from "../utils/sources";
+import { SourceIcon } from "./Icons";
 
 const cl = classNameFactory("calendar-sync-");
 
 interface CalendarFiltersProps {
-    filters: CalendarViewState["filters"];
-    onUpdateFilter: (key: keyof CalendarViewState["filters"], value: boolean) => void;
-    eventCounts: {
-        discord: number;
-        google: number;
-        outlook: number;
-    };
+    filters: EventFilters;
+    counts: Record<EventSource, number>;
+    onChange: (filters: EventFilters) => void;
 }
 
-export function CalendarFilters({ filters, onUpdateFilter, eventCounts }: CalendarFiltersProps) {
+export function CalendarFilters({ filters, counts, onChange }: CalendarFiltersProps) {
     return (
         <div className={cl("filters")}>
             <h3 className={cl("section-title")}>Calendars</h3>
 
             <div className={cl("filter-list")}>
-                {/* Discord Events */}
-                <label className={cl("filter-item")}>
-                    <input
-                        type="checkbox"
-                        checked={filters.showDiscord}
-                        onChange={e => onUpdateFilter("showDiscord", e.target.checked)}
-                        className={cl("filter-checkbox")}
-                    />
-                    <span
-                        className={cl("filter-color")}
-                        style={{ "--filter-color": "var(--brand-experiment)" } as React.CSSProperties}
-                    />
-                    <span className={cl("filter-label")}>
-                        <span className={cl("filter-name")}>Discord Events</span>
-                        <span className={cl("filter-count")}>{eventCounts.discord}</span>
-                    </span>
-                    <DiscordIcon className={cl("filter-icon")} />
-                </label>
-
-                {/* Google Calendar */}
-                <label className={cl("filter-item")}>
-                    <input
-                        type="checkbox"
-                        checked={filters.showGoogle}
-                        onChange={e => onUpdateFilter("showGoogle", e.target.checked)}
-                        className={cl("filter-checkbox")}
-                    />
-                    <span
-                        className={cl("filter-color")}
-                        style={{ "--filter-color": "#4285F4" } as React.CSSProperties}
-                    />
-                    <span className={cl("filter-label")}>
-                        <span className={cl("filter-name")}>Google Calendar</span>
-                        <span className={cl("filter-count")}>{eventCounts.google}</span>
-                    </span>
-                    <GoogleIcon className={cl("filter-icon")} />
-                </label>
-
-                {/* Outlook Calendar */}
-                <label className={cl("filter-item")}>
-                    <input
-                        type="checkbox"
-                        checked={filters.showOutlook}
-                        onChange={e => onUpdateFilter("showOutlook", e.target.checked)}
-                        className={cl("filter-checkbox")}
-                    />
-                    <span
-                        className={cl("filter-color")}
-                        style={{ "--filter-color": "#0078D4" } as React.CSSProperties}
-                    />
-                    <span className={cl("filter-label")}>
-                        <span className={cl("filter-name")}>Outlook Calendar</span>
-                        <span className={cl("filter-count")}>{eventCounts.outlook}</span>
-                    </span>
-                    <OutlookIcon className={cl("filter-icon")} />
-                </label>
+                {SOURCE_KEYS.map(source => (
+                    <label key={source} className={cl("filter-item")}>
+                        <input
+                            type="checkbox"
+                            checked={filters.sources[source]}
+                            onChange={e => onChange({ ...filters, sources: { ...filters.sources, [source]: e.target.checked } })}
+                            className={cl("filter-checkbox")}
+                        />
+                        <span className={cl("filter-color")} style={sourceColor(source)} />
+                        <span className={cl("filter-label")}>
+                            <span className={cl("filter-name")}>{SOURCES[source].label}</span>
+                            <span className={cl("filter-count")}>{counts[source]}</span>
+                        </span>
+                        <SourceIcon source={source} className={cl("filter-icon")} />
+                    </label>
+                ))}
             </div>
 
             <div className={cl("filter-divider")} />
@@ -91,12 +47,11 @@ export function CalendarFilters({ filters, onUpdateFilter, eventCounts }: Calend
             <h3 className={cl("section-title")}>Display Options</h3>
 
             <div className={cl("filter-list")}>
-                {/* Show Pending Events */}
                 <label className={cl("filter-item", "toggle")}>
                     <input
                         type="checkbox"
                         checked={filters.showPending}
-                        onChange={e => onUpdateFilter("showPending", e.target.checked)}
+                        onChange={e => onChange({ ...filters, showPending: e.target.checked })}
                         className={cl("filter-checkbox")}
                     />
                     <span className={cl("filter-toggle")}>

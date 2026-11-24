@@ -249,7 +249,7 @@
     width: 14px;
     height: 14px;
     border-radius: 4px;
-    background: var(--filter-color, var(--calendar-accent));
+    background: var(--event-color, var(--calendar-accent));
     flex-shrink: 0;
 }
 
@@ -1100,7 +1100,7 @@
     align-items: center;
     gap: 8px;
     font-size: 12px;
-    color: var(--source-color, var(--calendar-accent));
+    color: var(--event-color, var(--calendar-accent));
     background: rgba(88, 101, 242, 0.1);
     padding: 6px 12px;
     border-radius: 16px;
