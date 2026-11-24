@@ -5,8 +5,9 @@
  */
 
 import { settings } from "../settings";
-import { EventSource } from "../types";
-import { MINUTE_MS } from "./date";
+import { CalendarEvent, EventAttendee, EventSource } from "../types";
+import { addDays, MINUTE_MS } from "./date";
+import { SOURCES } from "./sources";
 
 /** External calendars, connected through OAuth. */
 export type Provider = Exclude<EventSource, "discord">;
@@ -23,6 +24,9 @@ interface ProviderConfig {
     authParams?: Record<string, string>;
     /** Extra parameters for every token request. */
     tokenParams?: Record<string, string>;
+    /** Calendar API endpoint listing the events between two dates. */
+    eventsUrl: (start: Date, end: Date) => string;
+    parseEvents: (body: any) => CalendarEvent[];
 }
 
 const GOOGLE_CLIENT_ID = "634850353269-g82ekhtmoilfpdjbcvedpb0i8ntc7d3c.apps.googleusercontent.com";
@@ -37,6 +41,14 @@ export const PROVIDERS: Record<Provider, ProviderConfig> = {
         clientId: () => GOOGLE_CLIENT_ID,
         tokenKey: "googleRefreshToken",
         authParams: { access_type: "offline", prompt: "consent" },
+        eventsUrl: (start, end) => "https://www.googleapis.com/calendar/v3/calendars/primary/events?" + new URLSearchParams({
+            timeMin: start.toISOString(),
+            timeMax: end.toISOString(),
+            singleEvents: "true",
+            orderBy: "startTime",
+            maxResults: "100",
+        }),
+        parseEvents: ({ items = [] }: { items?: GoogleEvent[]; }) => items.map(parseGoogleEvent),
     },
     outlook: {
         authUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
@@ -46,6 +58,13 @@ export const PROVIDERS: Record<Provider, ProviderConfig> = {
         clientId: () => settings.store.outlookClientId,
         tokenKey: "outlookRefreshToken",
         tokenParams: { scope: OUTLOOK_SCOPE },
+        eventsUrl: (start, end) => "https://graph.microsoft.com/v1.0/me/calendarView?" + new URLSearchParams({
+            startDateTime: start.toISOString(),
+            endDateTime: end.toISOString(),
+            $top: "100",
+            $orderby: "start/dateTime",
+        }),
+        parseEvents: ({ value = [] }: { value?: OutlookEvent[]; }) => value.map(parseOutlookEvent),
     },
 };
 
@@ -121,4 +140,85 @@ export async function getAccessToken(provider: Provider) {
     const { access_token, expires_in } = await requestToken(provider, { grant_type: "refresh_token", refresh_token: refreshToken });
     accessTokens.set(provider, { refreshToken, value: access_token, expiresAt: Date.now() + expires_in * 1000 - MINUTE_MS });
     return access_token;
+}
+
+const SYNC_WINDOW_DAYS = 90;
+
+/** Fetches the upcoming events of a provider, or nothing when it is not connected. */
+export async function fetchProviderEvents(provider: Provider): Promise<CalendarEvent[]> {
+    const accessToken = await getAccessToken(provider);
+    if (!accessToken) return [];
+
+    const { eventsUrl, parseEvents } = PROVIDERS[provider];
+    const now = new Date();
+    const response = await fetch(eventsUrl(now, addDays(now, SYNC_WINDOW_DAYS)), {
+        headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!response.ok) throw new Error(`${SOURCES[provider].label} API error: ${response.status}`);
+    return parseEvents(await response.json());
+}
+
+interface GoogleEvent {
+    id: string;
+    summary?: string;
+    description?: string;
+    location?: string;
+    start: { dateTime?: string; date?: string; };
+    end: { dateTime?: string; date?: string; };
+    attendees?: { email: string; displayName?: string; responseStatus?: string; }[];
+    organizer?: { email: string; displayName?: string; };
+}
+
+function parseGoogleEvent(event: GoogleEvent): CalendarEvent {
+    return {
+        id: `google-${event.id}`,
+        source: "google",
+        title: event.summary || "(No title)",
+        description: event.description,
+        location: event.location,
+        startTime: new Date(event.start.dateTime ?? event.start.date!),
+        endTime: new Date(event.end.dateTime ?? event.end.date!),
+        allDay: !event.start.dateTime,
+        status: "opted_in",
+        attendees: event.attendees?.map(a => ({
+            name: a.displayName,
+            email: a.email,
+            responseStatus: a.responseStatus as EventAttendee["responseStatus"],
+        })),
+        organizer: event.organizer && { name: event.organizer.displayName, email: event.organizer.email },
+    };
+}
+
+interface OutlookEvent {
+    id: string;
+    subject?: string;
+    bodyPreview?: string;
+    location?: { displayName?: string; };
+    /** UTC, without the trailing "Z". */
+    start: { dateTime: string; };
+    end: { dateTime: string; };
+    isAllDay?: boolean;
+    attendees?: { emailAddress: { name?: string; address: string; }; status: { response?: string; }; }[];
+    organizer?: { emailAddress: { name?: string; address: string; }; };
+}
+
+function parseOutlookEvent(event: OutlookEvent): CalendarEvent {
+    return {
+        id: `outlook-${event.id}`,
+        source: "outlook",
+        title: event.subject || "(No title)",
+        description: event.bodyPreview,
+        location: event.location?.displayName,
+        startTime: new Date(event.start.dateTime + "Z"),
+        endTime: new Date(event.end.dateTime + "Z"),
+        allDay: event.isAllDay,
+        status: "opted_in",
+        attendees: event.attendees?.map(a => ({
+            name: a.emailAddress.name,
+            email: a.emailAddress.address,
+            responseStatus: a.status.response as EventAttendee["responseStatus"],
+        })),
+        organizer: event.organizer && { name: event.organizer.emailAddress.name, email: event.organizer.emailAddress.address },
+    };
 }

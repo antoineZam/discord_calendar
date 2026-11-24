@@ -7,9 +7,9 @@
 import { GuildScheduledEventStore, GuildStore, RestAPI } from "@webpack/common";
 
 import { settings } from "../settings";
-import { CalendarEvent, DiscordGuildEvent, GoogleCalendarEvent, OutlookCalendarEvent } from "../types";
+import { CalendarEvent, DiscordGuildEvent } from "../types";
 import { logger } from "./logger";
-import { getAccessToken } from "./providers";
+import { fetchProviderEvents } from "./providers";
 
 export class CalendarManager {
     private syncInterval: NodeJS.Timeout | null = null;
@@ -60,7 +60,7 @@ export class CalendarManager {
         // Sync Google Calendar
         if (settings.store.googleCalendarEnabled && settings.store.googleRefreshToken) {
             try {
-                const googleEvents = await this.fetchGoogleEvents();
+                const googleEvents = await fetchProviderEvents("google");
                 events.push(...googleEvents);
             } catch (err) {
                 logger.error("Failed to fetch Google events:", err);
@@ -70,7 +70,7 @@ export class CalendarManager {
         // Sync Outlook Calendar
         if (settings.store.outlookCalendarEnabled && settings.store.outlookRefreshToken) {
             try {
-                const outlookEvents = await this.fetchOutlookEvents();
+                const outlookEvents = await fetchProviderEvents("outlook");
                 events.push(...outlookEvents);
             } catch (err) {
                 logger.error("Failed to fetch Outlook events:", err);
@@ -200,137 +200,6 @@ export class CalendarManager {
         }
 
         logger.info(`Total Discord events found: ${events.length}`);
-        return events;
-    }
-
-    // Google Calendar Events
-    async fetchGoogleEvents(): Promise<CalendarEvent[]> {
-        const accessToken = await getAccessToken("google");
-        if (!accessToken) return [];
-
-        const now = new Date();
-        const threeMonthsLater = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
-
-        const params = new URLSearchParams({
-            timeMin: now.toISOString(),
-            timeMax: threeMonthsLater.toISOString(),
-            singleEvents: "true",
-            orderBy: "startTime",
-            maxResults: "100",
-        });
-
-        const response = await fetch(
-            `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`,
-            {
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                },
-            }
-        );
-
-        if (!response.ok) {
-            throw new Error(`Google API error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const events: CalendarEvent[] = [];
-
-        for (const item of data.items || []) {
-            const googleEvent = item as GoogleCalendarEvent;
-
-            const startTime = googleEvent.start.dateTime
-                ? new Date(googleEvent.start.dateTime)
-                : new Date(googleEvent.start.date!);
-
-            const endTime = googleEvent.end.dateTime
-                ? new Date(googleEvent.end.dateTime)
-                : new Date(googleEvent.end.date!);
-
-            const event: CalendarEvent = {
-                id: `google-${googleEvent.id}`,
-                source: "google",
-                title: googleEvent.summary || "(No title)",
-                description: googleEvent.description,
-                location: googleEvent.location,
-                startTime,
-                endTime,
-                allDay: !googleEvent.start.dateTime,
-                status: "opted_in", // External events are always "opted in"
-                attendees: googleEvent.attendees?.map(a => ({
-                    name: a.displayName,
-                    email: a.email,
-                    responseStatus: a.responseStatus as any,
-                })),
-                organizer: googleEvent.organizer ? {
-                    name: googleEvent.organizer.displayName,
-                    email: googleEvent.organizer.email,
-                } : undefined,
-            };
-
-            events.push(event);
-        }
-
-        return events;
-    }
-
-    // Outlook Calendar Events
-    async fetchOutlookEvents(): Promise<CalendarEvent[]> {
-        const accessToken = await getAccessToken("outlook");
-        if (!accessToken) return [];
-
-        const now = new Date();
-        const threeMonthsLater = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
-
-        const params = new URLSearchParams({
-            startDateTime: now.toISOString(),
-            endDateTime: threeMonthsLater.toISOString(),
-            $top: "100",
-            $orderby: "start/dateTime",
-        });
-
-        const response = await fetch(
-            `https://graph.microsoft.com/v1.0/me/calendarView?${params}`,
-            {
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                },
-            }
-        );
-
-        if (!response.ok) {
-            throw new Error(`Microsoft Graph API error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const events: CalendarEvent[] = [];
-
-        for (const item of data.value || []) {
-            const outlookEvent = item as OutlookCalendarEvent;
-
-            const event: CalendarEvent = {
-                id: `outlook-${outlookEvent.id}`,
-                source: "outlook",
-                title: outlookEvent.subject || "(No title)",
-                description: outlookEvent.bodyPreview,
-                location: outlookEvent.location?.displayName,
-                startTime: new Date(outlookEvent.start.dateTime + "Z"),
-                endTime: new Date(outlookEvent.end.dateTime + "Z"),
-                allDay: outlookEvent.isAllDay,
-                status: "opted_in",
-                attendees: outlookEvent.attendees?.map(a => ({
-                    name: a.emailAddress.name,
-                    email: a.emailAddress.address,
-                    responseStatus: a.status.response as any,
-                })),
-                organizer: outlookEvent.organizer ? {
-                    name: outlookEvent.organizer.emailAddress.name,
-                    email: outlookEvent.organizer.emailAddress.address,
-                } : undefined,
-            };
-
-            events.push(event);
-        }
-
         return events;
     }
 
