@@ -14,10 +14,13 @@ import { fetchProviderEvents } from "./providers";
 
 /** Leaves Discord time to populate its stores before the first sync. */
 const STARTUP_DELAY_MS = 3000;
+/** How long synced events are considered fresh. */
+const STALE_AFTER_MS = MINUTE_MS;
 
 export class CalendarManager {
     private cachedEvents: CalendarEvent[] = [];
-    private lastSync: Date | null = null;
+    private lastSync = 0;
+    private pendingSync: Promise<void> | null = null;
     private timer?: ReturnType<typeof setTimeout>;
     private running = false;
 
@@ -37,12 +40,24 @@ export class CalendarManager {
     private scheduleSync(delayMs: number) {
         this.timer = setTimeout(async () => {
             this.timer = undefined;
-            await this.syncAllCalendars();
+            await this.refresh();
             if (this.running && !this.timer) this.scheduleSync(settings.store.syncIntervalMinutes * MINUTE_MS);
         }, delayMs);
     }
 
-    async syncAllCalendars() {
+    /** Syncs every enabled source. Concurrent calls share the same run. */
+    sync() {
+        return this.pendingSync ??= this.fetchAll().finally(() => {
+            this.pendingSync = null;
+        });
+    }
+
+    /** Syncs only when the events are older than {@link STALE_AFTER_MS}. */
+    async refresh() {
+        if (Date.now() - this.lastSync > STALE_AFTER_MS) await this.sync();
+    }
+
+    private async fetchAll() {
         logger.info("Syncing all calendars...");
 
         const events: CalendarEvent[] = [];
@@ -78,16 +93,13 @@ export class CalendarManager {
         }
 
         this.cachedEvents = events.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
-        this.lastSync = new Date();
+        this.lastSync = Date.now();
 
         logger.info(`Synced ${events.length} events`);
     }
 
     async getAllEvents(start: Date, end: Date): Promise<CalendarEvent[]> {
-        // If cache is stale, refresh
-        if (!this.lastSync || Date.now() - this.lastSync.getTime() > 60000) {
-            await this.syncAllCalendars();
-        }
+        await this.refresh();
 
         return this.cachedEvents.filter(event => {
             const eventStart = new Date(event.startTime);
@@ -235,7 +247,7 @@ export class CalendarManager {
             }
 
             // Refresh events
-            await this.syncAllCalendars();
+            await this.sync();
         } catch (err: any) {
             logger.error("Opt-in failed:", err);
             throw new Error(`Failed to opt in: ${err.message || err}`);
@@ -262,7 +274,7 @@ export class CalendarManager {
             }
 
             // Refresh events
-            await this.syncAllCalendars();
+            await this.sync();
         } catch (err: any) {
             logger.error("Opt-out failed:", err);
             throw new Error(`Failed to opt out: ${err.message || err}`);
