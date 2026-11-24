@@ -49,6 +49,8 @@ export const PROVIDERS: Record<Provider, ProviderConfig> = {
     },
 };
 
+export const PROVIDER_KEYS = Object.keys(PROVIDERS) as Provider[];
+
 interface TokenResponse {
     access_token: string;
     refresh_token?: string;

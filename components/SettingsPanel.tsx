@@ -5,59 +5,78 @@
  */
 
 import { classNameFactory } from "@api/Styles";
-import { React, useState } from "@webpack/common";
+import { useState } from "@webpack/common";
 
 import { settings } from "../settings";
 import { logger } from "../utils/logger";
 import { authenticate } from "../utils/OAuthManager";
-import { GoogleIcon, OutlookIcon } from "./Icons";
+import { Provider, PROVIDER_KEYS, PROVIDERS } from "../utils/providers";
+import { SOURCES } from "../utils/sources";
+import { SourceIcon } from "./Icons";
 
 const cl = classNameFactory("calendar-sync-settings-");
 
+type Status = "connected" | "connecting" | "disconnected";
+
+const STATUS_TEXT: Record<Status, { label: string; action: string; }> = {
+    connected: { label: "Connected", action: "Disconnect" },
+    connecting: { label: "Connecting...", action: "..." },
+    disconnected: { label: "Not connected", action: "Connect" },
+};
+
+function ConnectionCard({ provider }: { provider: Provider; }) {
+    const { tokenKey, clientId } = PROVIDERS[provider];
+    const { label } = SOURCES[provider];
+    const store = settings.use([tokenKey, "outlookClientId"]);
+    const [connecting, setConnecting] = useState(false);
+
+    const status: Status = connecting ? "connecting" : store[tokenKey] ? "connected" : "disconnected";
+    const missingClientId = status === "disconnected" && !clientId();
+
+    async function toggleConnection() {
+        if (status === "connected") {
+            settings.store[tokenKey] = "";
+            return;
+        }
+
+        setConnecting(true);
+        try {
+            await authenticate(provider);
+        } catch (err) {
+            logger.warn(`${label} was not connected:`, err);
+        } finally {
+            setConnecting(false);
+        }
+    }
+
+    return (
+        <div className={cl("connection-card")}>
+            <div className={cl("connection-header")}>
+                <div className={cl("connection-icon", provider)}>
+                    <SourceIcon source={provider} size={24} />
+                </div>
+                <div className={cl("connection-info")}>
+                    <h4>{label}</h4>
+                    <span className={cl("connection-status", status)}>{STATUS_TEXT[status].label}</span>
+                </div>
+                <button
+                    className={cl("connection-btn", status === "connected" ? "disconnect" : "connect")}
+                    onClick={toggleConnection}
+                    disabled={status === "connecting" || missingClientId}
+                >
+                    {STATUS_TEXT[status].action}
+                </button>
+            </div>
+            {missingClientId && (
+                <p className={cl("connection-warning")}>
+                    Enter your OAuth client ID in the settings below to connect.
+                </p>
+            )}
+        </div>
+    );
+}
+
 export function SettingsPanel() {
-    const [googleAuthStatus, setGoogleAuthStatus] = useState<"disconnected" | "connecting" | "connected">(
-        settings.store.googleRefreshToken ? "connected" : "disconnected"
-    );
-    const [outlookAuthStatus, setOutlookAuthStatus] = useState<"disconnected" | "connecting" | "connected">(
-        settings.store.outlookRefreshToken ? "connected" : "disconnected"
-    );
-
-    async function handleGoogleAuth() {
-        if (googleAuthStatus === "connected") {
-            // Disconnect
-            settings.store.googleRefreshToken = "";
-            setGoogleAuthStatus("disconnected");
-            return;
-        }
-
-        setGoogleAuthStatus("connecting");
-        try {
-            await authenticate("google");
-            setGoogleAuthStatus("connected");
-        } catch (err) {
-            logger.error("Google auth failed:", err);
-            setGoogleAuthStatus("disconnected");
-        }
-    }
-
-    async function handleOutlookAuth() {
-        if (outlookAuthStatus === "connected") {
-            // Disconnect
-            settings.store.outlookRefreshToken = "";
-            setOutlookAuthStatus("disconnected");
-            return;
-        }
-
-        setOutlookAuthStatus("connecting");
-        try {
-            await authenticate("outlook");
-            setOutlookAuthStatus("connected");
-        } catch (err) {
-            logger.error("Outlook auth failed:", err);
-            setOutlookAuthStatus("disconnected");
-        }
-    }
-
     return (
         <div className={cl("panel")}>
             <div className={cl("section")}>
@@ -66,58 +85,7 @@ export function SettingsPanel() {
                     Connect your external calendars to see all your events in one place.
                 </p>
 
-                {/* Google Calendar Connection */}
-                <div className={cl("connection-card")}>
-                    <div className={cl("connection-header")}>
-                        <div className={cl("connection-icon", "google")}>
-                            <GoogleIcon size={24} />
-                        </div>
-                        <div className={cl("connection-info")}>
-                            <h4>Google Calendar</h4>
-                            <span className={cl("connection-status", googleAuthStatus)}>
-                                {googleAuthStatus === "connected" ? "Connected" :
-                                 googleAuthStatus === "connecting" ? "Connecting..." : "Not connected"}
-                            </span>
-                        </div>
-                        <button
-                            className={cl("connection-btn", googleAuthStatus === "connected" ? "disconnect" : "connect")}
-                            onClick={handleGoogleAuth}
-                            disabled={googleAuthStatus === "connecting"}
-                        >
-                            {googleAuthStatus === "connected" ? "Disconnect" :
-                             googleAuthStatus === "connecting" ? "..." : "Connect"}
-                        </button>
-                    </div>
-                </div>
-
-                {/* Outlook Calendar Connection */}
-                <div className={cl("connection-card")}>
-                    <div className={cl("connection-header")}>
-                        <div className={cl("connection-icon", "outlook")}>
-                            <OutlookIcon size={24} />
-                        </div>
-                        <div className={cl("connection-info")}>
-                            <h4>Outlook Calendar</h4>
-                            <span className={cl("connection-status", outlookAuthStatus)}>
-                                {outlookAuthStatus === "connected" ? "Connected" :
-                                 outlookAuthStatus === "connecting" ? "Connecting..." : "Not connected"}
-                            </span>
-                        </div>
-                        <button
-                            className={cl("connection-btn", outlookAuthStatus === "connected" ? "disconnect" : "connect")}
-                            onClick={handleOutlookAuth}
-                            disabled={outlookAuthStatus === "connecting" || !settings.store.outlookClientId}
-                        >
-                            {outlookAuthStatus === "connected" ? "Disconnect" :
-                             outlookAuthStatus === "connecting" ? "..." : "Connect"}
-                        </button>
-                    </div>
-                    {!settings.store.outlookClientId && (
-                        <p className={cl("connection-warning")}>
-                            Enter your Outlook/Azure OAuth Client ID in the settings below to connect.
-                        </p>
-                    )}
-                </div>
+                {PROVIDER_KEYS.map(provider => <ConnectionCard key={provider} provider={provider} />)}
             </div>
 
             <div className={cl("section")}>
@@ -146,4 +114,3 @@ export function SettingsPanel() {
         </div>
     );
 }
-
