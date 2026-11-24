@@ -45,13 +45,6 @@ export interface EventAttendee {
 
 export type CalendarView = "month" | "week" | "day" | "agenda";
 
-export interface CalendarViewState {
-    currentDate: Date;
-    view: CalendarView;
-    selectedEvent: CalendarEvent | null;
-    filters: EventFilters;
-}
-
 export interface EventFilters {
     sources: Record<EventSource, boolean>;
     showPending: boolean;

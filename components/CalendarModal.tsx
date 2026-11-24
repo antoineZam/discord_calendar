@@ -9,9 +9,9 @@ import { ModalCloseButton, ModalContent, ModalHeader, ModalRoot, ModalSize, open
 import { React, useEffect, useMemo, useState } from "@webpack/common";
 
 import { settings } from "../settings";
-import { CalendarEvent, CalendarView, CalendarViewState, EventFilters, EventSource } from "../types";
+import { CalendarEvent, CalendarView, EventFilters, EventSource } from "../types";
 import { calendarManager } from "../utils/CalendarManager";
-import { addDays, dayKey, EventsByDay, formatFullDate, formatMediumDate, formatMonthYear, getMonthWeeks, groupByDay, isSameDay, shiftDate, startOfMonth, startOfWeek, WEEKDAY_NAMES } from "../utils/date";
+import { dayKey, EventsByDay, formatFullDate, formatMediumDate, formatMonthYear, getMonthWeeks, groupByDay, isSameDay, shiftDate, startOfWeek, WEEKDAY_NAMES } from "../utils/date";
 import { logger } from "../utils/logger";
 import { SOURCE_KEYS } from "../utils/sources";
 import { CalendarFilters } from "./CalendarFilters";
@@ -30,51 +30,30 @@ export function openCalendarModal() {
     ));
 }
 
-interface CalendarModalProps {
-    onClose: () => void;
+const VIEWS: CalendarView[] = ["month", "week", "day", "agenda"];
+const UPCOMING_LIMIT = 5;
+
+function initialFilters(): EventFilters {
+    const { discordEventsEnabled, googleCalendarEnabled, outlookCalendarEnabled, showPendingEvents } = settings.store;
+    return {
+        sources: { discord: discordEventsEnabled, google: googleCalendarEnabled, outlook: outlookCalendarEnabled },
+        showPending: showPendingEvents,
+    };
 }
 
-function CalendarModalContent({ onClose }: CalendarModalProps) {
-    const [viewState, setViewState] = useState<CalendarViewState>({
-        currentDate: new Date(),
-        view: settings.store.defaultCalendarView as CalendarView || "month",
-        selectedEvent: null,
-        filters: {
-            sources: {
-                discord: settings.store.discordEventsEnabled,
-                google: settings.store.googleCalendarEnabled,
-                outlook: settings.store.outlookCalendarEnabled,
-            },
-            showPending: settings.store.showPendingEvents,
-        },
-    });
-
-    const [events, setEvents] = useState<CalendarEvent[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+function CalendarModalContent({ onClose }: { onClose: () => void; }) {
+    const events = React.useSyncExternalStore(calendarManager.subscribe, calendarManager.getEvents);
+    const [loading, setLoading] = useState(!calendarManager.hasSynced);
     const [error, setError] = useState<string | null>(null);
+    const [currentDate, setCurrentDate] = useState(() => new Date());
+    const [view, setView] = useState(() => settings.store.defaultCalendarView as CalendarView || "month");
+    const [filters, setFilters] = useState(initialFilters);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
 
-    // Fetch events on mount and when filters change
     useEffect(() => {
-        fetchEvents();
-    }, [viewState.currentDate, viewState.filters]);
+        calendarManager.refresh().finally(() => setLoading(false));
+    }, []);
 
-    async function fetchEvents() {
-        setIsLoading(true);
-        setError(null);
-
-        try {
-            const gridStart = startOfWeek(startOfMonth(viewState.currentDate));
-            const allEvents = await calendarManager.getAllEvents(gridStart, addDays(gridStart, 42));
-            setEvents(allEvents);
-        } catch (err) {
-            logger.error("Failed to fetch events:", err);
-            setError("Failed to load events. Please try again.");
-        } finally {
-            setIsLoading(false);
-        }
-    }
-
-    const { filters } = viewState;
     const filteredEvents = useMemo(
         () => events.filter(event => filters.sources[event.source] && (event.status !== "pending" || filters.showPending)),
         [events, filters]
@@ -88,70 +67,29 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
         return counts;
     }, [events]);
 
-    function navigate(direction: 1 | -1) {
-        setViewState(prev => ({ ...prev, currentDate: shiftDate(prev.currentDate, prev.view, direction) }));
-    }
-
-    function navigateToday() {
-        setViewState(prev => ({
-            ...prev,
-            currentDate: new Date(),
-        }));
-    }
-
-    function setView(view: CalendarView) {
-        setViewState(prev => ({ ...prev, view }));
-    }
-
-    function selectEvent(event: CalendarEvent | null) {
-        setViewState(prev => ({ ...prev, selectedEvent: event }));
-    }
-
-    function setFilters(filters: EventFilters) {
-        setViewState(prev => ({ ...prev, filters }));
-    }
+    // Looked up on every render so the details panel follows status changes
+    const selectedEvent = events.find(event => event.id === selectedId);
+    const selectEvent = (event: CalendarEvent | null) => setSelectedId(event?.id ?? null);
 
     async function handleOptIn(event: CalendarEvent) {
-        if (event.source !== "discord") return;
-        if (!event.guildId) {
-            logger.error("Event missing guildId:", event);
-            return;
-        }
+        if (event.source !== "discord" || !event.guildId) return;
 
-        setIsLoading(true);
         try {
-            logger.debug(`Opting into event: ${event.id} in guild ${event.guildId}`);
             await calendarManager.optInToEvent(event.id, event.guildId);
-            // Update selected event to show opted_in status
-            selectEvent({ ...event, status: "opted_in" });
-            await fetchEvents(); // Refresh events
         } catch (err) {
             logger.error("Failed to opt into event:", err);
             setError(`Failed to opt in: ${(err as Error).message}`);
-        } finally {
-            setIsLoading(false);
         }
     }
 
     async function handleOptOut(event: CalendarEvent) {
-        if (event.source !== "discord") return;
-        if (!event.guildId) {
-            logger.error("Event missing guildId:", event);
-            return;
-        }
+        if (event.source !== "discord" || !event.guildId) return;
 
-        setIsLoading(true);
         try {
-            logger.debug(`Opting out of event: ${event.id} in guild ${event.guildId}`);
             await calendarManager.optOutOfEvent(event.id, event.guildId);
-            // Update selected event to show pending status
-            selectEvent({ ...event, status: "pending" });
-            await fetchEvents(); // Refresh events
         } catch (err) {
             logger.error("Failed to opt out of event:", err);
             setError(`Failed to opt out: ${(err as Error).message}`);
-        } finally {
-            setIsLoading(false);
         }
     }
 
@@ -164,30 +102,26 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
                         Calendar
                     </h2>
                     <span className={cl("date-display")}>
-                        {formatViewTitle(viewState.currentDate, viewState.view)}
+                        {formatViewTitle(currentDate, view)}
                     </span>
                 </div>
                 <div className={cl("header-center")}>
                     <div className={cl("nav-buttons")}>
-                        <button className={cl("nav-btn")} onClick={() => navigate(-1)}>
+                        <button className={cl("nav-btn")} onClick={() => setCurrentDate(shiftDate(currentDate, view, -1))}>
                             <ChevronLeftIcon />
                         </button>
-                        <button className={cl("nav-btn", "today-btn")} onClick={navigateToday}>
+                        <button className={cl("nav-btn", "today-btn")} onClick={() => setCurrentDate(new Date())}>
                             Today
                         </button>
-                        <button className={cl("nav-btn")} onClick={() => navigate(1)}>
+                        <button className={cl("nav-btn")} onClick={() => setCurrentDate(shiftDate(currentDate, view, 1))}>
                             <ChevronRightIcon />
                         </button>
                     </div>
                 </div>
                 <div className={cl("header-right")}>
                     <div className={cl("view-switcher")}>
-                        {(["month", "week", "day", "agenda"] as const).map(v => (
-                            <button
-                                key={v}
-                                className={cl("view-btn", viewState.view === v && "active")}
-                                onClick={() => setView(v)}
-                            >
+                        {VIEWS.map(v => (
+                            <button key={v} className={cl("view-btn", view === v && "active")} onClick={() => setView(v)}>
                                 {v.charAt(0).toUpperCase() + v.slice(1)}
                             </button>
                         ))}
@@ -206,8 +140,8 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
 
                     <div className={cl("mini-calendar")}>
                         <MiniCalendar
-                            currentDate={viewState.currentDate}
-                            onDateSelect={date => setViewState(prev => ({ ...prev, currentDate: date }))}
+                            currentDate={currentDate}
+                            onDateSelect={setCurrentDate}
                             eventsByDay={eventsByDay}
                         />
                     </div>
@@ -215,7 +149,7 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
                     <div className={cl("upcoming-events")}>
                         <h3 className={cl("section-title")}>Upcoming Events</h3>
                         <div className={cl("events-list")}>
-                            {getUpcomingEvents(filteredEvents, 5).map(event => (
+                            {getUpcomingEvents(filteredEvents, UPCOMING_LIMIT).map(event => (
                                 <EventCard
                                     key={event.id}
                                     event={event}
@@ -228,7 +162,7 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
                 </div>
 
                 <div className={cl("main")}>
-                    {isLoading ? (
+                    {loading ? (
                         <div className={cl("loading")}>
                             <div className={cl("spinner")} />
                             <span>Loading events...</span>
@@ -236,12 +170,12 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
                     ) : error ? (
                         <div className={cl("error")}>
                             <span>{error}</span>
-                            <button onClick={fetchEvents}>Retry</button>
+                            <button onClick={() => setError(null)}>Dismiss</button>
                         </div>
                     ) : (
                         <CalendarGrid
-                            view={viewState.view}
-                            currentDate={viewState.currentDate}
+                            view={view}
+                            currentDate={currentDate}
                             events={filteredEvents}
                             eventsByDay={eventsByDay}
                             onSelectEvent={selectEvent}
@@ -249,9 +183,9 @@ function CalendarModalContent({ onClose }: CalendarModalProps) {
                     )}
                 </div>
 
-                {viewState.selectedEvent && (
+                {selectedEvent && (
                     <EventDetails
-                        event={viewState.selectedEvent}
+                        event={selectedEvent}
                         onClose={() => selectEvent(null)}
                         onOptIn={handleOptIn}
                         onOptOut={handleOptOut}

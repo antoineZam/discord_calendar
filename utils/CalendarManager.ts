@@ -27,7 +27,8 @@ const FETCHERS: Record<EventSource, { enabled: () => boolean; fetch: () => Promi
 };
 
 export class CalendarManager {
-    private cachedEvents: CalendarEvent[] = [];
+    private events: CalendarEvent[] = [];
+    private listeners = new Set<() => void>();
     private lastSync = 0;
     private pendingSync: Promise<void> | null = null;
     private timer?: ReturnType<typeof setTimeout>;
@@ -54,6 +55,25 @@ export class CalendarManager {
         }, delayMs);
     }
 
+    /** Sorted by start time, and replaced rather than mutated so React can compare snapshots. */
+    getEvents = () => this.events;
+
+    subscribe = (listener: () => void) => {
+        this.listeners.add(listener);
+        return () => {
+            this.listeners.delete(listener);
+        };
+    };
+
+    get hasSynced() {
+        return this.lastSync > 0;
+    }
+
+    private setEvents(events: CalendarEvent[]) {
+        this.events = events.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+        this.listeners.forEach(listener => listener());
+    }
+
     /** Syncs every enabled source. Concurrent calls share the same run. */
     sync() {
         return this.pendingSync ??= this.fetchAll().finally(() => {
@@ -74,23 +94,13 @@ export class CalendarManager {
             } catch (err) {
                 // A transient failure should not wipe the calendar: keep what this source returned last time
                 logger.error(`Failed to fetch ${source} events:`, err);
-                return this.cachedEvents.filter(event => event.source === source);
+                return this.events.filter(event => event.source === source);
             }
         }));
 
-        this.cachedEvents = results.flat().sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
         this.lastSync = Date.now();
-        logger.info(`Synced ${this.cachedEvents.length} events`);
-    }
-
-    async getAllEvents(start: Date, end: Date): Promise<CalendarEvent[]> {
-        await this.refresh();
-
-        return this.cachedEvents.filter(event => {
-            const eventStart = new Date(event.startTime);
-            const eventEnd = new Date(event.endTime);
-            return eventStart <= end && eventEnd >= start;
-        });
+        this.setEvents(results.flat());
+        logger.info(`Synced ${this.events.length} events`);
     }
 
     // Opt-in management
